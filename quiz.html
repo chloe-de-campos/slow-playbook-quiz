@@ -15,7 +15,7 @@
   --accent-ink:#ffffff;
   --defender:#b98a2e;
   --good:#3f7d4d;
-  --bad:#c24444;
+  --bad:#b23a6e;
   --card-border:#d3dbc9;
   --shadow:0 1px 2px rgba(34,48,31,0.06), 0 8px 24px -12px rgba(34,48,31,0.18);
 }
@@ -31,7 +31,7 @@
     --accent-ink:#1a1207;
     --defender:#d9a94a;
     --good:#5fae72;
-    --bad:#e07070;
+    --bad:#e2649a;
     --card-border:#33422d;
     --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
   }
@@ -47,7 +47,7 @@
   --accent-ink:#1a1207;
   --defender:#d9a94a;
   --good:#5fae72;
-  --bad:#e07070;
+  --bad:#e2649a;
   --card-border:#33422d;
   --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
 }
@@ -166,12 +166,15 @@ body{
   overflow:hidden;
   margin-bottom:10px;
   opacity:1;
-  transform:translateY(0);
+  transform:translateX(0);
   transition:opacity 0.22s ease, transform 0.22s ease;
 }
 .card.card-enter{
   opacity:0;
-  transform:translateY(8px);
+  transform:translateX(18px);
+}
+.card.card-enter.enter-back{
+  transform:translateX(-18px);
 }
 .card-head{
   padding:12px 18px 8px;
@@ -687,12 +690,15 @@ function revealIn(el){
 }
 
 // Question cards start in the .card-enter (offset/transparent) state and settle into
-// the default .card state one frame later, giving Next/Prev a sense of direction.
+// the default .card state one frame later. Slides in from the right on Next, from the
+// left on Prev, so the arrow the user just clicked matches the direction things move.
+var lastNavDirection = 1; // 1 = forward (Next), -1 = backward (Prev)
 function animateCardIn(cardEl){
   if(!cardEl || reduceMotion) return;
   cardEl.classList.add('card-enter');
+  if(lastNavDirection < 0) cardEl.classList.add('enter-back');
   requestAnimationFrame(function(){
-    requestAnimationFrame(function(){ cardEl.classList.remove('card-enter'); });
+    requestAnimationFrame(function(){ cardEl.classList.remove('card-enter', 'enter-back'); });
   });
 }
 
@@ -1069,6 +1075,7 @@ function finishQuestion(wasCorrect, explainHtml){
 }
 
 function goNext(){
+  lastNavDirection = 1;
   if(current >= Q.length - 1){
     showResults();
   } else {
@@ -1079,6 +1086,7 @@ function goNext(){
 
 function goPrev(){
   if(current <= 0) return;
+  lastNavDirection = -1;
   current--;
   renderQuestion();
 }
