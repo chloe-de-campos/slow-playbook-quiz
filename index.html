@@ -989,6 +989,22 @@ function renderDrawQuestion(q){
   var drawing = false;
   var locked = false;
 
+  // The rest of the field is touch-action:pan-y so a scroll swipe passes through
+  // (see .field-svg comment), but touch-action is decided once, from whatever
+  // element a touch actually starts on — so a stroke that begins here can't be
+  // reclaimed by native scrolling mid-drag even once it moves off this small
+  // circle. Sized to match the pointerDown start-radius check below (14 units)
+  // so "where you're allowed to start a cut" and "where scroll is locked out"
+  // stay the same zone.
+  var START_HIT_RADIUS = 14;
+  var startHitZone = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  startHitZone.setAttribute('cx', q.startPoint.x);
+  startHitZone.setAttribute('cy', q.startPoint.y);
+  startHitZone.setAttribute('r', START_HIT_RADIUS);
+  startHitZone.setAttribute('fill', 'rgba(0,0,0,0.001)');
+  startHitZone.style.touchAction = 'none';
+  svg.appendChild(startHitZone);
+
   // First draw-question only: a marching-dots preview of the actual cut shape, so it's
   // obvious both that the field is drawable and roughly what a cut looks like.
   // Removed on the first touch/click.
@@ -1060,7 +1076,7 @@ function renderDrawQuestion(q){
   function pointerDown(evt){
     if(locked || drawing) return;
     var p = svgPoint(evt);
-    if(distTo(p, q.startPoint) > 14) return;
+    if(distTo(p, q.startPoint) > START_HIT_RADIUS) return;
     clearStartHint();
     drawing = true;
     activePointerId = evt.pointerId;
