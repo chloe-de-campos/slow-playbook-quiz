@@ -1,0 +1,953 @@
+<title>Slow Field IQ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Karla:wght@400;500;700&display=swap');
+
+:root{
+  --bg:#eef1e9;
+  --bg-raise:#ffffff;
+  --field:#d8e3d2;
+  --field-line:#8fae87;
+  --ink:#22301f;
+  --ink-soft:#5c6b57;
+  --accent:#e0622c;
+  --accent-ink:#ffffff;
+  --defender:#b98a2e;
+  --good:#3f7d4d;
+  --bad:#c24444;
+  --card-border:#d3dbc9;
+  --shadow:0 1px 2px rgba(34,48,31,0.06), 0 8px 24px -12px rgba(34,48,31,0.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151c14;
+    --bg-raise:#1d2619;
+    --field:#22301f;
+    --field-line:#4a6142;
+    --ink:#eef1e9;
+    --ink-soft:#a6b39e;
+    --accent:#f07940;
+    --accent-ink:#1a1207;
+    --defender:#d9a94a;
+    --good:#5fae72;
+    --bad:#e07070;
+    --card-border:#33422d;
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151c14;
+  --bg-raise:#1d2619;
+  --field:#22301f;
+  --field-line:#4a6142;
+  --ink:#eef1e9;
+  --ink-soft:#a6b39e;
+  --accent:#f07940;
+  --accent-ink:#1a1207;
+  --defender:#d9a94a;
+  --good:#5fae72;
+  --bad:#e07070;
+  --card-border:#33422d;
+  --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Karla',system-ui,sans-serif;
+  min-height:100vh;
+}
+.wrap{
+  max-width:520px;
+  margin:0 auto;
+  padding:12px 16px 40px;
+}
+.masthead{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  margin-bottom:12px;
+  gap:12px;
+}
+.masthead h1{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:28px;
+  letter-spacing:0.01em;
+  margin:0;
+  text-wrap:balance;
+}
+.masthead .tag{
+  font-size:12px;
+  color:var(--ink-soft);
+  font-weight:500;
+}
+.progress-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.progress-track{
+  flex:1;
+  height:6px;
+  border-radius:999px;
+  background:var(--field-line);
+  opacity:0.35;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:var(--accent);
+  border-radius:999px;
+  transition:width 0.35s ease;
+}
+.progress-label{
+  font-size:12px;
+  color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.score-chip{
+  font-size:12px;
+  font-weight:700;
+  color:var(--good);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+
+.card{
+  background:var(--bg-raise);
+  border:1px solid var(--card-border);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.card-head{
+  padding:12px 18px 8px;
+}
+.section-label{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:13px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 4px;
+}
+.prompt{
+  font-size:17px;
+  font-weight:700;
+  line-height:1.35;
+  margin:0;
+  text-wrap:balance;
+}
+.prompt .callname{
+  color:var(--accent);
+}
+
+.field-frame{
+  padding:4px 14px 8px;
+  position:relative;
+}
+.field-svg{
+  width:100%;
+  height:auto;
+  display:block;
+  border-radius:10px;
+  background:var(--field);
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.field-svg.drawable{cursor:crosshair;}
+
+.draw-actions{
+  display:flex;
+  gap:10px;
+  padding:2px 18px 6px;
+}
+.draw-actions button{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  border-radius:11px;
+  padding:9px;
+  cursor:pointer;
+}
+.clear-btn{
+  flex:none;
+  width:96px;
+  background:transparent;
+  border:1.5px solid var(--card-border);
+  color:var(--ink-soft);
+}
+.clear-btn:disabled{opacity:0.4;cursor:default;}
+.check-btn{
+  flex:1;
+  background:var(--accent);
+  color:var(--accent-ink);
+  border:none;
+}
+.check-btn:disabled{opacity:0.4;cursor:default;}
+
+.result-banner{
+  margin:2px 18px 0;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:700;
+  font-size:14px;
+  display:none;
+}
+.result-banner.show{display:block;}
+.result-banner.good{background:color-mix(in srgb, var(--good) 16%, var(--bg-raise));color:var(--good);}
+.result-banner.bad{background:color-mix(in srgb, var(--bad) 16%, var(--bg-raise));color:var(--bad);}
+
+.inline-next-btn{
+  display:none;
+  width:calc(100% - 36px);
+  margin:12px 18px 18px;
+  background:var(--accent);
+  color:var(--accent-ink);
+  border:none;
+  border-radius:11px;
+  padding:11px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.inline-next-btn.show{display:block;}
+
+.explain{
+  margin:10px 18px 18px;
+  padding:12px 14px;
+  border-radius:10px;
+  background:var(--field);
+  font-size:13.5px;
+  line-height:1.5;
+  color:var(--ink);
+  display:none;
+}
+.explain.show{display:block;}
+.explain b{color:var(--accent);}
+
+.nav-row{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-bottom:8px;
+}
+.nav-arrow{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:var(--bg-raise);
+  border:1.5px solid var(--card-border);
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+}
+.nav-arrow:active{transform:scale(0.94);}
+.nav-arrow:disabled{opacity:0.35;cursor:default;}
+.nav-arrow:last-child{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:var(--accent-ink);
+}
+
+.results{
+  text-align:center;
+  padding:36px 22px;
+}
+.results h2{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:26px;
+  margin:0 0 6px;
+}
+.results .big-score{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:56px;
+  font-weight:700;
+  color:var(--accent);
+  line-height:1;
+  margin:10px 0;
+  font-variant-numeric:tabular-nums;
+}
+.results p{
+  color:var(--ink-soft);
+  font-size:14px;
+  margin:0 0 20px;
+}
+.review-list{
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:20px;
+}
+.review-item{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  font-size:13.5px;
+  padding:10px 12px;
+  border-radius:9px;
+  background:var(--field);
+}
+.review-item .dot{
+  flex:none;
+  width:18px;height:18px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;
+  margin-top:1px;
+}
+.review-item.right .dot{background:var(--good);color:#fff;}
+.review-item.wrong .dot{background:var(--bad);color:#fff;}
+.restart-btn{
+  background:transparent;
+  border:1.5px solid var(--accent);
+  color:var(--accent);
+  border-radius:11px;
+  padding:11px 18px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.field-key{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  padding:0 18px 14px;
+  font-size:11.5px;
+  color:var(--ink-soft);
+}
+.field-key span{display:flex;align-items:center;gap:5px;}
+.field-key i{
+  width:10px;height:10px;border-radius:50%;display:inline-block;
+}
+svg.disc-key{
+  flex:none;
+  display:inline-block;
+}
+.field-key i.you-key{
+  background:var(--accent);
+}
+.field-key .mark-key{
+  color:var(--defender);
+  font-weight:700;
+  font-size:12px;
+}
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>Slow Field IQ</h1>
+    <span class="tag">2026 playbook check</span>
+  </div>
+
+  <div id="quiz-area">
+    <div class="progress-row">
+      <span class="score-chip" id="score-chip">0 correct</span>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <span class="progress-label" id="progress-label">1 / 11</span>
+    </div>
+    <div class="nav-row">
+      <button class="nav-arrow" id="prev-btn" aria-label="Previous play">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="nav-arrow" id="next-btn" aria-label="Next play">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 5 L16 12 L9 19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div id="question-host"></div>
+  </div>
+
+  <div id="results-area" style="display:none;"></div>
+</div>
+
+<script>
+(function(){
+
+// ---------- field diagram helpers ----------
+// coordinate system: 0-100 wide (sideline to sideline), 0-140 tall.
+// y=0 is downfield / attacking direction, y=140 is backfield (near disc origin).
+var VB_W = 100, VB_H = 140;
+
+function svgOpenTag(minY, cropH){
+  minY = minY || 0;
+  cropH = cropH || VB_H;
+  return '<svg class="field-svg" data-vbw="'+VB_W+'" data-vbh="'+cropH+'" data-vby="'+minY+'" viewBox="0 '+minY+' '+VB_W+' '+cropH+'" xmlns="http://www.w3.org/2000/svg">';
+}
+function player(x,y,lbl,fill,stroke,r){
+  r = r||4.2;
+  return '<g>'
+    + '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+fill+'" stroke="'+(stroke||'none')+'" stroke-width="1"/>'
+    + (lbl ? '<text x="'+x+'" y="'+(y+1.5)+'" font-size="4.4" font-weight="700" text-anchor="middle" fill="var(--bg-raise)" font-family="Barlow Condensed, sans-serif">'+lbl+'</text>' : '')
+    + '</g>';
+}
+function you(x,y,lbl){
+  return '<g>'
+    + '<circle cx="'+x+'" cy="'+y+'" r="6.2" fill="none" stroke="var(--accent)" stroke-width="1" stroke-dasharray="1.6,1.4"/>'
+    + player(x,y,lbl||'Y','var(--accent)')
+    + '</g>';
+}
+function markX(x,y){
+  return '<text x="'+x+'" y="'+(y+2.6)+'" font-size="7.5" font-weight="700" text-anchor="middle" fill="var(--defender)">X</text>';
+}
+function disc(x,y){
+  return '<circle cx="'+x+'" cy="'+y+'" r="2.4" fill="none" stroke="var(--ink)" stroke-width="1.1"/>'
+    + '<circle cx="'+x+'" cy="'+y+'" r="0.9" fill="var(--ink)"/>';
+}
+function sidelineLine(x){
+  return '<line x1="'+x+'" y1="0" x2="'+x+'" y2="140" stroke="var(--field-line)" stroke-width="0.6" opacity="0.7"/>';
+}
+// Figure out the vertical slice of the 0-140 field this play actually uses (players,
+// discs, marks, and the ideal answer arrow's reach), then crop the SVG's viewBox to
+// just that slice plus a little padding — this trims empty field above/below the
+// play without touching any of the underlying x/y coordinates.
+function playYBounds(play){
+  var minY = Infinity, maxY = -Infinity;
+  function consider(y){ if(y<minY) minY=y; if(y>maxY) maxY=y; }
+  play.players.forEach(function(p){ consider(p.y); });
+  play.discs.forEach(function(d){ consider(d.y); });
+  play.marks.forEach(function(m){ consider(m.y); });
+  if(play.startPoint) consider(play.startPoint.y);
+  // Include where the ideal cut actually ends, so there's real room to draw it —
+  // not a flat guess at how deep a cut might go.
+  if(play.startPoint && typeof play.idealAngle === 'number'){
+    var idealDist = Math.max(20, play.minDist + 6);
+    var iaRad = play.idealAngle * Math.PI/180;
+    var iEndY = play.startPoint.y - Math.sin(iaRad)*idealDist;
+    consider(iEndY);
+  }
+  if(minY === Infinity){ minY = 0; maxY = VB_H; }
+  // Fixed pad on both ends so dots/arrows have breathing room and aren't flush
+  // against the edge.
+  var topPad = 24;
+  var bottomPad = 18;
+  minY = Math.max(0, minY - topPad);
+  maxY = Math.min(VB_H, maxY + bottomPad);
+  return {minY: minY, maxY: maxY};
+}
+
+function buildSetupSvg(play){
+  var b = playYBounds(play);
+  var cropH = b.maxY - b.minY;
+  var parts = [svgOpenTag(b.minY, cropH)];
+  play.sidelines.forEach(function(sl){ parts.push(sidelineLine(sl.x)); });
+  play.discs.forEach(function(d){ parts.push(disc(d.x, d.y)); });
+  play.marks.forEach(function(m){ parts.push(markX(m.x, m.y)); });
+  play.players.forEach(function(p){
+    if(p.kind === 'you'){
+      parts.push(you(p.x, p.y, p.label || 'Y'));
+    } else {
+      parts.push(player(p.x, p.y, p.label || '', 'var(--field-line)', 'var(--card-border)'));
+    }
+  });
+  parts.push('</svg>');
+  return parts.join('');
+}
+
+// ---------- direction-based grading ----------
+// Grade a drawn path by comparing its overall direction (start->end vector) against
+// an ideal direction (derived from the actual answer path drawn in the editor),
+// with an angle tolerance, plus a minimum travel distance.
+function angleOf(dx,dy){
+  return Math.atan2(-dy, dx) * 180 / Math.PI;
+}
+function angleDiff(a,b){
+  var d = Math.abs(a-b) % 360;
+  return d > 180 ? 360-d : d;
+}
+function gradeDirection(idealAngle, minDist, tolerance){
+  tolerance = tolerance || 32;
+  return function(pts){
+    // Grade from the path's actual first point (where the player really put their
+    // finger down) to its actual last point — not from the "ideal" start location —
+    // so the graded vector always matches what was visually drawn.
+    var start = pts[0];
+    var end = pts[pts.length-1];
+    var dx = end.x - start.x;
+    var dy = end.y - start.y;
+    var dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < minDist) return false;
+    var ang = angleOf(dx,dy);
+    return angleDiff(ang, idealAngle) <= tolerance;
+  };
+}
+
+// Some cuts are genuinely two-part — a fake one way, then a hard break the other way
+// (a V-cut). Collapsing that into one start->end vector nets the two legs into a
+// single misleading average that represents neither. Instead, find the sharpest bend
+// in the drawn path (the point farthest from the straight line between its start and
+// end) and grade each side of that bend against its own ideal leg, in order.
+function pathElbow(pts){
+  var a = pts[0], b = pts[pts.length-1];
+  var dx = b.x-a.x, dy = b.y-a.y;
+  var len = Math.sqrt(dx*dx+dy*dy) || 1;
+  var bestI = 0, bestD = -1;
+  for(var i=0;i<pts.length;i++){
+    var d = Math.abs((pts[i].y-a.y)*dx - (pts[i].x-a.x)*dy)/len;
+    if(d > bestD){ bestD = d; bestI = i; }
+  }
+  return bestI;
+}
+// Two-leg grading runs two independent angle+distance checks instead of one, and a
+// hand-drawn corner is rounded rather than sharp — the elbow-detection below lands
+// close to but not exactly on the original bend, which skews both legs' measured
+// angle/distance a bit. A single-vector tolerance (32°) is too strict once you're
+// running that check twice, so legs get a wider tolerance and a discount on the
+// required distance per leg to absorb that rounding.
+function gradeLegs(legs, tolerance){
+  tolerance = tolerance || 44;
+  return function(pts){
+    if(pts.length < 4) return false;
+    var elbowI = pathElbow(pts);
+    if(elbowI <= 0 || elbowI >= pts.length-1) return false;
+    var leg1 = pts.slice(0, elbowI+1);
+    var leg2 = pts.slice(elbowI);
+    function legOk(legPts, leg){
+      var start = legPts[0], end = legPts[legPts.length-1];
+      var dx = end.x-start.x, dy = end.y-start.y;
+      var dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist < leg.minDist*0.7) return false;
+      return angleDiff(angleOf(dx,dy), leg.angle) <= tolerance;
+    }
+    return legOk(leg1, legs[0]) && legOk(leg2, legs[1]);
+  };
+}
+
+// ---------- play diagram data (from the team's diagram editor export) ----------
+var PLAY_DATA = [{"name": "Default", "section": "Ho Stack \u00b7 Default", "prompt": "\"<span class=\"callname\">Default</span>\" is called. You're the closest rail cutter. Draw your cut.", "players": [{"id": 5, "x": 12.775469653179192, "y": 78.15878886929595, "kind": "player", "label": ""}, {"id": 6, "x": 34.262102601156066, "y": 77.11560793084169, "kind": "player", "label": ""}, {"id": 7, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 9, "x": 20.503672928709054, "y": 109.21186185540407, "kind": "player", "label": ""}, {"id": 10, "x": 43.278841522158, "y": 108.11298438776826, "kind": "player", "label": ""}, {"id": 11, "x": 68.51065751445087, "y": 108.07986753257924, "kind": "player", "label": ""}, {"id": 129, "x": 83.23699421965318, "y": 77.8246096942067, "kind": "you", "label": "Y"}], "discs": [{"id": 93, "x": 71.95779142581888, "y": 104.24132295385145}], "marks": [{"id": 119, "x": 64.2491570327553, "y": 102.18506730893296}], "sidelines": [{"id": 12, "x": 94.38072013487476}, {"id": 13, "x": 4.129034200385356}], "startPoint": {"x": 84.5014450867052, "y": 82.06958840479979}, "idealAngle": -161.6, "minDist": 22.0}, {"name": "Planets B", "section": "Ho Stack \u00b7 Planets B", "prompt": "\"<span class=\"callname\">Planets B</span>\" is called. You're the B. Draw your cut.", "players": [{"id": 14, "x": 12.775469653179192, "y": 78.15878886929595, "kind": "player", "label": ""}, {"id": 16, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 17, "x": 82.24199181117534, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 18, "x": 19.683285163776493, "y": 124.76775192464841, "kind": "player", "label": ""}, {"id": 19, "x": 44.34007707129094, "y": 110.32278181583587, "kind": "player", "label": ""}, {"id": 20, "x": 73.99897639691714, "y": 111.65949851619285, "kind": "player", "label": ""}, {"id": 128, "x": 39.783538053949904, "y": 79.37056470689431, "kind": "you", "label": "B"}], "discs": [{"id": 101, "x": 39.98073217726397, "y": 107.51085974796783}], "marks": [{"id": 118, "x": 48.81231936416185, "y": 105.10085587716657}], "sidelines": [{"id": 21, "x": 94.38072013487476}, {"id": 22, "x": 4.129034200385356}], "startPoint": {"x": 40.7, "y": 80.3}, "idealAngle": -138.0, "minDist": 12.3, "legs": [{"angle": 67.6, "minDist": 21.9}, {"angle": -126.1, "minDist": 46.4}]}, {"name": "Planets D", "section": "Ho Stack \u00b7 Planets D", "prompt": "\"<span class=\"callname\">Planets D</span>\" is called. You're the D. Draw your cut.", "players": [{"id": 32, "x": 12.775469653179192, "y": 78.15878886929595, "kind": "player", "label": ""}, {"id": 33, "x": 34.262102601156066, "y": 77.11560793084169, "kind": "player", "label": ""}, {"id": 34, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 36, "x": 11.568220134874759, "y": 109.30820179777214, "kind": "player", "label": ""}, {"id": 37, "x": 50.58706647398844, "y": 113.98219431422304, "kind": "player", "label": ""}, {"id": 38, "x": 25.550939306358384, "y": 127.31473915100426, "kind": "player", "label": ""}, {"id": 130, "x": 82.31424614643545, "y": 77.94503462216679, "kind": "you", "label": "D"}], "discs": [{"id": 102, "x": 54.93587427745664, "y": 109.2555158917896}], "marks": [{"id": 116, "x": 46.84790462427746, "y": 108.24394649692486}], "sidelines": [{"id": 39, "x": 94.38072013487476}, {"id": 40, "x": 4.129034200385356}], "startPoint": {"x": 82.91184971098265, "y": 79.79506257795364}, "idealAngle": -159.4, "minDist": 29.6}, {"name": "Planets A", "section": "Ho Stack \u00b7 Planets A", "prompt": "\"<span class=\"callname\">Planets A</span>\" is called. You're the B. Draw your cut.", "players": [{"id": 23, "x": 12.775469653179192, "y": 78.15878886929595, "kind": "player", "label": ""}, {"id": 25, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 26, "x": 82.24199181117534, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 27, "x": 14.870845375722544, "y": 106.58960904907316, "kind": "player", "label": ""}, {"id": 28, "x": 49.536368015414254, "y": 112.74031224463464, "kind": "player", "label": ""}, {"id": 29, "x": 19.443942678227362, "y": 120.5227732140553, "kind": "player", "label": ""}, {"id": 131, "x": 34.77239884393064, "y": 76.37499462388715, "kind": "you", "label": "B"}], "discs": [{"id": 105, "x": 45.36518545279383, "y": 108.72263558556622}], "marks": [{"id": 115, "x": 53.73615125240848, "y": 108.63231688959614}], "sidelines": [{"id": 30, "x": 94.38072013487476}, {"id": 31, "x": 4.129034200385356}], "startPoint": {"x": 34.73025048169557, "y": 74.64689690765988}, "idealAngle": 90.0, "minDist": 18.0}, {"name": "Pluto", "section": "Ho Stack \u00b7 Pluto", "prompt": "\"<span class=\"callname\">Pluto A</span>\" is called. Draw your cut.", "players": [{"id": 23, "x": 12.775469653179192, "y": 78.15878886929595, "kind": "you", "label": "A"}, {"id": 25, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 26, "x": 82.24199181117534, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 27, "x": 14.870845375722544, "y": 106.58960904907316, "kind": "player", "label": ""}, {"id": 28, "x": 49.536368015414254, "y": 112.74031224463464, "kind": "player", "label": ""}, {"id": 29, "x": 19.443942678227362, "y": 120.5227732140553, "kind": "player", "label": ""}, {"id": 131, "x": 34.77239884393064, "y": 76.37499462388715, "kind": "player", "label": ""}], "discs": [{"id": 105, "x": 45.36518545279383, "y": 108.72263558556622}], "marks": [{"id": 115, "x": 53.73615125240848, "y": 108.63231688959614}], "sidelines": [{"id": 30, "x": 94.38072013487476}, {"id": 31, "x": 4.129034200385356}], "startPoint": {"x": 12.9, "y": 76.8}, "idealAngle": -36.9, "minDist": 13.2, "legs": [{"angle": -49.3, "minDist": 23.5}, {"angle": 63.8, "minDist": 38.1}]}, {"name": "Big Apple", "section": "Vert Stack \u00b7 Big Apple", "prompt": "\"<span class=\"callname\">Big Apple</span>\" is called. You're the back of stack. Draw your cut.", "players": [{"id": 44, "x": 47.53131021194605, "y": 36.2268289535934, "kind": "player", "label": ""}, {"id": 45, "x": 47.45755057803468, "y": 47.79063266096082, "kind": "player", "label": ""}, {"id": 46, "x": 47.38379094412332, "y": 58.223947357102915, "kind": "player", "label": ""}, {"id": 47, "x": 47.65022880539499, "y": 69.73958109328632, "kind": "player", "label": ""}, {"id": 48, "x": 48.13041907514451, "y": 105.77373016214356, "kind": "player", "label": ""}, {"id": 49, "x": 73.46309007707129, "y": 126.1405961033934, "kind": "player", "label": ""}, {"id": 132, "x": 46.23374277456647, "y": 23.544578727796655, "kind": "you", "label": "Y"}], "discs": [{"id": 114, "x": 43.4368978805395, "y": 102.48914025203217}], "marks": [{"id": 121, "x": 51.66184971098266, "y": 100.32751279514859}], "sidelines": [{"id": 41, "x": 4.72513246628131}, {"id": 42, "x": 95.95375722543352}], "startPoint": {"x": 48.0, "y": 23.5}, "idealAngle": -78.1, "minDist": 39.3, "legs": [{"angle": -109.6, "minDist": 51.7}, {"angle": -8.7, "minDist": 23.9}]}, {"name": "Mega-T", "section": "Vert Stack \u00b7 Mega-T", "prompt": "\"<span class=\"callname\">Mega-T</span>\" is called. You're the offset front of stack. Draw your cut.", "players": [{"id": 68, "x": 47.808285163776496, "y": 24.535073760268375, "kind": "player", "label": ""}, {"id": 69, "x": 47.53131021194605, "y": 36.2268289535934, "kind": "player", "label": ""}, {"id": 70, "x": 47.45755057803468, "y": 47.79063266096082, "kind": "player", "label": ""}, {"id": 71, "x": 47.38379094412332, "y": 58.223947357102915, "kind": "player", "label": ""}, {"id": 72, "x": 47.65022880539499, "y": 69.73958109328632, "kind": "player", "label": ""}, {"id": 74, "x": 73.46309007707129, "y": 126.1405961033934, "kind": "player", "label": ""}, {"id": 133, "x": 55.93840317919076, "y": 101.07414734850113, "kind": "you", "label": "Y"}], "discs": [{"id": 112, "x": 76.83495905587668, "y": 122.77471936690894}], "marks": [{"id": 122, "x": 69.23771676300578, "y": 120.26837555373963}], "sidelines": [{"id": 75, "x": 4.72513246628131}, {"id": 76, "x": 95.95375722543352}], "startPoint": {"x": 55.7, "y": 102.3}, "idealAngle": 3.8, "minDist": 15.3, "legs": [{"angle": -105.1, "minDist": 16.0}, {"angle": 31.7, "minDist": 31.0}]}, {"name": "T-2", "section": "Vert Stack \u00b7 T-2", "prompt": "\"<span class=\"callname\">T-2</span>\" is called. You're the offset front of stack. Draw your cut.", "players": [{"id": 59, "x": 47.808285163776496, "y": 24.535073760268375, "kind": "player", "label": ""}, {"id": 60, "x": 47.53131021194605, "y": 36.2268289535934, "kind": "player", "label": ""}, {"id": 61, "x": 47.45755057803468, "y": 47.79063266096082, "kind": "player", "label": ""}, {"id": 62, "x": 47.38379094412332, "y": 58.223947357102915, "kind": "player", "label": ""}, {"id": 63, "x": 47.65022880539499, "y": 69.73958109328632, "kind": "player", "label": ""}, {"id": 65, "x": 73.46309007707129, "y": 126.1405961033934, "kind": "player", "label": ""}, {"id": 134, "x": 58.523000963391134, "y": 99.52217108941551, "kind": "you", "label": "Y"}], "discs": [{"id": 126, "x": 77.37385597302506, "y": 120.54685819964733}], "marks": [{"id": 127, "x": 69.32351878612717, "y": 122.4209711410262}], "sidelines": [{"id": 66, "x": 4.72513246628131}, {"id": 67, "x": 95.95375722543352}], "startPoint": {"x": 62.64902456647399, "y": 98.135779106275}, "idealAngle": 77.1, "minDist": 28.2}, {"name": "Jacket", "section": "Vert Stack \u00b7 Jacket", "prompt": "\"<span class=\"callname\">Jacket</span>\" is called. You're the front of stack. Draw your cut.", "players": [{"id": 50, "x": 47.808285163776496, "y": 24.535073760268375, "kind": "player", "label": ""}, {"id": 51, "x": 47.53131021194605, "y": 36.2268289535934, "kind": "player", "label": ""}, {"id": 52, "x": 47.45755057803468, "y": 47.79063266096082, "kind": "player", "label": ""}, {"id": 55, "x": 48.13041907514451, "y": 105.77373016214356, "kind": "player", "label": ""}, {"id": 56, "x": 23.372772157996145, "y": 94.24304330996517, "kind": "player", "label": ""}, {"id": 155, "x": 45.56689547206166, "y": 75.70212033891015, "kind": "you", "label": "Y"}, {"id": 156, "x": 48.71598025048169, "y": 61.58530815878887, "kind": "player", "label": ""}], "discs": [{"id": 149, "x": 52.23988439306358, "y": 101.33607156681433}], "marks": [{"id": 148, "x": 43.79816955684008, "y": 99.32497526988087}, {"id": 151, "x": 64.49452071290945, "y": 65.18149756999699}, {"id": 152, "x": 51.877107418111756, "y": 48.23620489441315}, {"id": 153, "x": 54.53847543352601, "y": 37.22635585566212}, {"id": 154, "x": 52.89619460500964, "y": 17.011526385961893}, {"id": 157, "x": 38.54618256262042, "y": 82.95922756010494}], "sidelines": [{"id": 57, "x": 4.72513246628131}, {"id": 58, "x": 95.95375722543352}], "startPoint": {"x": 45.2, "y": 75.5}, "idealAngle": 111.9, "minDist": 31.2, "legs": [{"angle": -180.0, "minDist": 20.2}, {"angle": 97.6, "minDist": 17.1}]}, {"name": "See Ya", "section": "Split Stack \u00b7 See Ya", "prompt": "\"<span class=\"callname\">See Ya</span>\" is called. You're the back of the three. Draw your cut.", "players": [{"id": 81, "x": 13.215016859344894, "y": 63.64306911530687, "kind": "player", "label": ""}, {"id": 82, "x": 13.153299614643545, "y": 80.1638639198314, "kind": "player", "label": ""}, {"id": 83, "x": 89.55473265895954, "y": 65.09268418562642, "kind": "player", "label": ""}, {"id": 84, "x": 89.50355250481695, "y": 81.00081716915402, "kind": "player", "label": ""}, {"id": 88, "x": 34.16726878612717, "y": 119.24476366607888, "kind": "player", "label": ""}, {"id": 89, "x": 69.86843689788054, "y": 118.20910928562213, "kind": "player", "label": ""}, {"id": 162, "x": 12.835681599229288, "y": 46.85884478086964, "kind": "you", "label": "Y"}], "discs": [], "marks": [], "sidelines": [{"id": 78, "x": 5.298651252408478}, {"id": 79, "x": 95.37120664739885}], "startPoint": {"x": 13.838210500963392, "y": 45.80663197281837}, "idealAngle": 19.6, "minDist": 28.0}, {"name": "T-2 B", "section": "Vert Stack \u00b7 T-2 B", "prompt": "\"<span class=\"callname\">T-2</span>\" is called. You're the second in the stack. Draw your cut.", "players": [{"id": 163, "x": 45.51443861066236, "y": 43.34012477011287, "kind": "player", "label": ""}, {"id": 164, "x": 45.48667205169629, "y": 55.15929825826692, "kind": "player", "label": ""}, {"id": 165, "x": 45.63370860258482, "y": 66.83332732321229, "kind": "player", "label": ""}, {"id": 166, "x": 45.537787762520196, "y": 77.91857488009809, "kind": "player", "label": ""}, {"id": 167, "x": 59.72397516155089, "y": 109.03943240416862, "kind": "player", "label": ""}, {"id": 168, "x": 76.67167306138933, "y": 126.50914139410769, "kind": "player", "label": ""}, {"id": 169, "x": 46.452822092084006, "y": 92.1919512458981, "kind": "you", "label": "Y"}], "discs": [{"id": 170, "x": 80.70539680936996, "y": 122.04247953553785}], "marks": [{"id": 171, "x": 71.68378937802909, "y": 120.51783202913707}], "sidelines": [{"id": 172, "x": 94.39115508885298}, {"id": 173, "x": 5.5507875605815835}], "startPoint": {"x": 46.5, "y": 101.5}, "idealAngle": -14.1, "minDist": 28.4, "legs": [{"angle": -90.6, "minDist": 14.0}, {"angle": 25.2, "minDist": 22.0}]}, {"name": "Planets C", "section": "Ho Stack \u00b7 Planets C", "prompt": "\"<span class=\"callname\">Planets B</span>\" is called. You're the A. Draw your cut.", "players": [{"id": 174, "x": 38.1859602180937, "y": 77.19348382676428, "kind": "player", "label": ""}, {"id": 175, "x": 62.275710500963385, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 176, "x": 82.24199181117534, "y": 77.23452754720228, "kind": "player", "label": ""}, {"id": 177, "x": 19.683285163776493, "y": 124.76775192464841, "kind": "player", "label": ""}, {"id": 178, "x": 44.34007707129094, "y": 110.32278181583587, "kind": "player", "label": ""}, {"id": 179, "x": 68.79669830371567, "y": 114.71016191266092, "kind": "player", "label": ""}, {"id": 180, "x": 16.55202443457189, "y": 78.19119397064657, "kind": "you", "label": "Y"}], "discs": [{"id": 181, "x": 39.98073217726397, "y": 107.51085974796783}], "marks": [{"id": 182, "x": 48.81231936416185, "y": 105.10085587716657}], "sidelines": [{"id": 183, "x": 94.38072013487476}, {"id": 184, "x": 4.129034200385356}], "startPoint": {"x": 14.8, "y": 76.4}, "idealAngle": 89.6, "minDist": 35.8}, {"name": "See Ya B", "section": "Split Stack \u00b7 See Ya B", "prompt": "\"<span class=\"callname\">See Ya</span>\" is called. You're the reset handler. Draw your cut.", "players": [{"id": 185, "x": 15.349858642972535, "y": 65.06382748548556, "kind": "player", "label": ""}, {"id": 186, "x": 15.392770597738286, "y": 76.82683639248494, "kind": "player", "label": ""}, {"id": 187, "x": 15.159279079159935, "y": 90.03497890447512, "kind": "player", "label": ""}, {"id": 188, "x": 12.525873384491115, "y": 123.67693195340954, "kind": "player", "label": ""}, {"id": 189, "x": 86.78501110662359, "y": 95.75556236702607, "kind": "player", "label": ""}, {"id": 190, "x": 86.19623384491115, "y": 82.59538062096571, "kind": "player", "label": ""}, {"id": 191, "x": 50.353392568659125, "y": 118.8063899606938, "kind": "you", "label": "Y"}], "discs": [{"id": 192, "x": 8.091427705977383, "y": 118.85813710288126}], "marks": [{"id": 193, "x": 18.436364095315025, "y": 120.11079658144314}], "sidelines": [{"id": 194, "x": 95.44439115508885}, {"id": 195, "x": 5.686465064620355}], "startPoint": {"x": 48.8, "y": 118.8}, "idealAngle": 143.1, "minDist": 43.2}];
+
+var explains = {
+  "Default": 'Default (Ho stack): everyone spreads on one horizontal line. The closest rail cutter slashes flat along that line toward the middle to get the disc and clear space for the next look.',
+  "Planets B": 'Planets [position]: two players clear out and the called position cuts into the space they vacated. On "Planets B," B cuts diagonally into the space cleared out.',
+  "Planets D": 'On "Planets D," B and C clear out and D cuts across into their space for the big crossfield under.',
+  "Pluto": 'Pluto is the counter to Planets: when the defense poaches the crossfield cutter, that cutter turns the cut deep, while another clearing cutter comes back under to fill the vacated space.',
+  "Big Apple": 'Big Apple: standard vert set-up sending the back of the stack under to get the disc attacking the breakside. The back-of-stack player curls down the open side and around the front of the stack to the break side — after that, the next back-of-stack cutter goes deep and comes back under to continue, and the third cuts under to the breakside and butterflies out.',
+  "Mega-T": 'Mega-T: six-person vert stack with no reset back, disc on the sideline, front of stack offset. That offset front-of-stack cutter cuts backfield and then upline before clearing — the second player in the stack can run the same cut afterward.',
+  "T-2": 'T-2: same Mega-T shape, but the front of stack simply clears upline, and the pass goes to the second player in the stack cutting under into the space that was just cleared.',
+  "Jacket": 'Jacket: vert stack of 5. Front of stack clears toward their own defender first. Second in stack either gets the gut-shot look or also clears toward their defender; third in stack comes under for the gut shot; back of stack is the continue.',
+  "See Ya": 'See Ya: split stack, 3 on one side / 2 on the other. All three on that side juke under and clear deep to open the lane so the handler can be hit going upline. One of the 3 then comes back under for the continue, and the closest player on the other side fills the handler\'s vacated spot.',
+  "T-2 B": 'Same T-2 shape, but this time it\'s the second player in the stack getting the look: step backfield first to sell the clear, then plant and break hard upline into the space that just opened.'
+};
+
+var idealHints = {
+  "Default": 'A flat, horizontal slash along the Ho line toward the middle of the field.',
+  "Planets B": 'A diagonal cut into the space your teammates cleared out of.',
+  "Planets D": 'A flatter cut across into the space B and C vacated.',
+  "Pluto": 'Bend the cut upfield/deep, attacking the space behind the poach rather than continuing flat.',
+  "Big Apple": 'Curl down the open side first, then bend up and around the front of the stack toward the break side.',
+  "Mega-T": 'Step backfield first, then plant and cut upline.',
+  "T-2": 'A shorter cut back toward the disc, underneath the space the front of stack just cleared.',
+  "Jacket": 'Clear toward the side your own defender is on.',
+  "See Ya": 'A juke toward the disc first, then a hard clear deep.',
+  "T-2 B": 'Two-part cut: step backfield first, then plant and break hard upline.'
+};
+
+// Per-play grading overrides for plays still graded as a single start->end vector.
+// (Big Apple used to need this — its S-curve made a single net vector a loose test —
+// but it's now graded properly via `legs`, so this is empty until another single-vector
+// play needs tightening.)
+var tightPlays = {};
+
+var Q = [];
+PLAY_DATA.forEach(function(play){
+  var override = tightPlays[play.name];
+  var tolerance = override ? override.tolerance : 32;
+  var minDist = Math.max(14, play.minDist) + (override ? override.minDistBonus : 0);
+  Q.push({
+    type:'draw',
+    section: play.section,
+    prompt: play.prompt,
+    setup: buildSetupSvg(play),
+    startPoint: {x: play.startPoint.x, y: play.startPoint.y},
+    idealAngle: play.idealAngle,
+    idealDist: Math.max(20, play.minDist + 6),
+    legs: play.legs || null,
+    youLabel: (play.players.filter(function(p){return p.kind==='you';})[0] || {}).label || 'Y',
+    grade: play.legs ? gradeLegs(play.legs, override ? tolerance : 44) : gradeDirection(play.idealAngle, minDist, tolerance),
+    idealHint: idealHints[play.name] || 'Match the shape of the cut this call is meant to create.',
+    explain: explains[play.name] || ''
+  });
+});
+
+// ---------- quiz engine ----------
+var current = 0;
+var scoreCount = 0;
+var picks = []; // {qIndex, correct}
+
+var host = document.getElementById('question-host');
+var scoreChip = document.getElementById('score-chip');
+var progFill = document.getElementById('progress-fill');
+var progLabel = document.getElementById('progress-label');
+var quizArea = document.getElementById('quiz-area');
+var resultsArea = document.getElementById('results-area');
+var prevBtn = document.getElementById('prev-btn');
+var nextBtn = document.getElementById('next-btn');
+prevBtn.addEventListener('click', goPrev);
+nextBtn.addEventListener('click', goNext);
+
+function renderQuestion(){
+  var q = Q[current];
+  progLabel.textContent = (current+1) + ' / ' + Q.length;
+  progFill.style.width = (current/Q.length*100) + '%';
+  scoreChip.textContent = scoreCount + ' correct';
+  prevBtn.disabled = (current === 0);
+  nextBtn.setAttribute('aria-label', current === Q.length - 1 ? 'See results' : 'Next play');
+
+  if(q.type === 'draw'){
+    renderDrawQuestion(q);
+  } else {
+    renderMcQuestion(q);
+  }
+}
+
+function renderMcQuestion(q){
+  var html = '<div class="card">';
+  html += '<div class="card-head"><p class="section-label">'+q.section+'</p><p class="prompt">'+q.prompt+'</p></div>';
+  html += '<div class="options" id="opts"></div>';
+  html += '<div class="explain" id="explain"></div>';
+  html += '<button class="inline-next-btn" id="inline-next-btn"></button>';
+  html += '</div>';
+  host.innerHTML = html;
+  document.getElementById('inline-next-btn').addEventListener('click', goNext);
+
+  var optsHost = document.getElementById('opts');
+  optsHost.className = 'field-key';
+  optsHost.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:4px 18px 18px;';
+  q.options.forEach(function(opt, i){
+    var btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.style.cssText = 'text-align:left;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink);border-radius:11px;padding:12px 14px;font-family:Karla,sans-serif;font-size:14.5px;font-weight:500;line-height:1.4;cursor:pointer;';
+    btn.innerHTML = opt.t;
+    btn.addEventListener('click', function(){ chooseMc(i); });
+    optsHost.appendChild(btn);
+  });
+}
+
+function chooseMc(i){
+  var q = Q[current];
+  var buttons = document.querySelectorAll('#opts button');
+  var correctIdx = q.options.findIndex(function(o){return o.c;});
+  var wasCorrect = (i === correctIdx);
+
+  buttons.forEach(function(b, idx){
+    b.disabled = true;
+    if(idx === correctIdx){ b.style.borderColor='var(--good)'; b.style.background='color-mix(in srgb, var(--good) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✓</span>' + b.innerHTML; }
+    else if(idx === i){ b.style.borderColor='var(--bad)'; b.style.background='color-mix(in srgb, var(--bad) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✗</span>' + b.innerHTML; }
+  });
+
+  finishQuestion(wasCorrect, null);
+}
+
+// ---------- draw-the-cut question ----------
+function renderDrawQuestion(q){
+  var html = '<div class="card">';
+  html += '<div class="card-head"><p class="section-label">'+q.section+'</p>';
+  html += '<p class="prompt">'+q.prompt+'</p></div>';
+  html += '<div class="field-frame"><div id="draw-host">'+q.setup+'</div></div>';
+  html += '<div class="field-key"><span><i class="you-key"></i>Y, for you</span><span><i style="background:var(--field-line)"></i>teammates</span><span class="mark-key">X&nbsp;Mark</span><span><svg class="disc-key" viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="3.6" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="5" cy="5" r="1.4" fill="var(--ink)"/></svg>disc</span></div>';
+  html += '<div class="draw-actions"><button class="clear-btn" id="clear-btn" disabled>Clear</button><button class="check-btn" id="check-btn" disabled>Check cut</button></div>';
+  html += '<div class="result-banner" id="result-banner"></div>';
+  html += '<div class="explain" id="explain"></div>';
+  html += '<button class="inline-next-btn" id="inline-next-btn"></button>';
+  html += '</div>';
+  host.innerHTML = html;
+  document.getElementById('inline-next-btn').addEventListener('click', goNext);
+
+  var svg = document.querySelector('#draw-host svg');
+  svg.classList.add('drawable');
+  var pathPts = [];
+  var pathEl = null;
+  var drawing = false;
+  var locked = false;
+
+  var checkBtn = document.getElementById('check-btn');
+  var clearBtn = document.getElementById('clear-btn');
+
+  function svgPoint(evt){
+    var rect = svg.getBoundingClientRect();
+    var vbw = parseFloat(svg.getAttribute('data-vbw')) || VB_W;
+    var vbh = parseFloat(svg.getAttribute('data-vbh')) || VB_H;
+    var vby = parseFloat(svg.getAttribute('data-vby')) || 0;
+    var x = (evt.clientX - rect.left) / rect.width * vbw;
+    var y = vby + (evt.clientY - rect.top) / rect.height * vbh;
+    return {x:x, y:y};
+  }
+
+  function distTo(p, sp){
+    return Math.sqrt(Math.pow(p.x-sp.x,2) + Math.pow(p.y-sp.y,2));
+  }
+
+  function updatePathEl(){
+    if(!pathEl) return;
+    var d = 'M ' + pathPts.map(function(p){return p.x.toFixed(1)+' '+p.y.toFixed(1);}).join(' L ');
+    pathEl.setAttribute('d', d);
+  }
+
+  // Trims trailing points that are within a tiny radius of each other (pointerup jitter)
+  // and returns a direction vector computed from a point a stable distance back from the
+  // true end, rather than the last raw (often noisy) segment — this is what fixes
+  // the arrowhead pointing the wrong way on freehand paths.
+  function stableEndDirection(pts){
+    var end = pts[pts.length-1];
+    var lookback = 6; // world units in the 0-100/0-140 viewBox
+    for(var i = pts.length-1; i >= 0; i--){
+      if(distTo(pts[i], end) >= lookback){
+        return {from: pts[i], to: end};
+      }
+    }
+    return {from: pts[0], to: end};
+  }
+
+  var activePointerId = null;
+
+  function pointerDown(evt){
+    if(locked || drawing) return;
+    var p = svgPoint(evt);
+    if(distTo(p, q.startPoint) > 14) return;
+    drawing = true;
+    activePointerId = evt.pointerId;
+    // Use the real touch/click point as the path's first point (not the ideal startPoint) —
+    // grading below measures from q.startPoint separately, but the drawn + graded path should
+    // reflect where the player actually put their finger down.
+    pathPts = [p];
+    if(pathEl) pathEl.remove();
+    pathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
+    pathEl.setAttribute('fill','none');
+    pathEl.setAttribute('stroke','var(--accent)');
+    pathEl.setAttribute('stroke-width','1.6');
+    pathEl.setAttribute('stroke-linecap','round');
+    pathEl.setAttribute('stroke-linejoin','round');
+    svg.appendChild(pathEl);
+    updatePathEl();
+    svg.setPointerCapture && evt.pointerId!=null && svg.setPointerCapture(evt.pointerId);
+    evt.preventDefault();
+  }
+  function pointerMove(evt){
+    if(!drawing || locked) return;
+    if(activePointerId!=null && evt.pointerId!=null && evt.pointerId!==activePointerId) return;
+    var p = svgPoint(evt);
+    pathPts.push(p);
+    updatePathEl();
+    evt.preventDefault();
+  }
+  function pointerUp(evt){
+    if(!drawing) return;
+    if(activePointerId!=null && evt && evt.pointerId!=null && evt.pointerId!==activePointerId) return;
+    drawing = false;
+    activePointerId = null;
+    if(pathPts.length > 1){
+      checkBtn.disabled = false;
+      clearBtn.disabled = false;
+    }
+  }
+
+  svg.addEventListener('pointerdown', pointerDown);
+  svg.addEventListener('pointermove', pointerMove);
+  svg.addEventListener('pointerup', pointerUp);
+  svg.addEventListener('pointerleave', pointerUp);
+  svg.addEventListener('pointercancel', pointerUp);
+
+  clearBtn.addEventListener('click', function(){
+    if(locked) return;
+    pathPts = [];
+    if(pathEl){ pathEl.remove(); pathEl = null; }
+    checkBtn.disabled = true;
+    clearBtn.disabled = true;
+  });
+
+  checkBtn.addEventListener('click', function(){
+    if(locked || pathPts.length < 2) return;
+    locked = true;
+    checkBtn.disabled = true;
+    clearBtn.disabled = true;
+    svg.classList.remove('drawable');
+
+    var wasCorrect = q.grade(pathPts);
+    var resultColor = wasCorrect ? 'var(--good)' : 'var(--bad)';
+
+    if(pathEl){
+      pathEl.setAttribute('stroke', resultColor);
+    }
+
+    // Draw a stable, correctly-oriented arrowhead at the true end point, using a
+    // direction computed from points spaced apart enough to avoid pointerup jitter.
+    var dir = stableEndDirection(pathPts);
+    var end = pathPts[pathPts.length-1];
+    var dx = dir.to.x - dir.from.x;
+    var dy = dir.to.y - dir.from.y;
+    var len = Math.sqrt(dx*dx+dy*dy) || 1;
+    var ux = dx/len, uy = dy/len;
+    var headLen = 3.6, headWidth = 2.2;
+    var backX = end.x - ux*headLen, backY = end.y - uy*headLen;
+    var perpX = -uy, perpY = ux;
+    var p1x = backX + perpX*headWidth, p1y = backY + perpY*headWidth;
+    var p2x = backX - perpX*headWidth, p2y = backY - perpY*headWidth;
+    var arrowHead = document.createElementNS('http://www.w3.org/2000/svg','path');
+    arrowHead.setAttribute('d', 'M '+end.x.toFixed(2)+' '+end.y.toFixed(2)+' L '+p1x.toFixed(2)+' '+p1y.toFixed(2)+' L '+p2x.toFixed(2)+' '+p2y.toFixed(2)+' Z');
+    arrowHead.setAttribute('fill', resultColor);
+    svg.appendChild(arrowHead);
+
+    // When wrong, draw the correct answer directly on the field as a dashed reference
+    // path, instead of just describing it in text.
+    function drawRefSegment(from, to, withHead){
+      var dx = to.x-from.x, dy = to.y-from.y;
+      var len = Math.sqrt(dx*dx+dy*dy) || 1;
+      var ux = dx/len, uy = dy/len;
+      var refLine = document.createElementNS('http://www.w3.org/2000/svg','path');
+      refLine.setAttribute('d', 'M '+from.x.toFixed(2)+' '+from.y.toFixed(2)+' L '+to.x.toFixed(2)+' '+to.y.toFixed(2));
+      refLine.setAttribute('fill','none');
+      refLine.setAttribute('stroke','var(--good)');
+      refLine.setAttribute('stroke-width','1.4');
+      refLine.setAttribute('stroke-dasharray','3,2.4');
+      refLine.setAttribute('stroke-linecap','round');
+      svg.appendChild(refLine);
+      if(withHead){
+        var rHeadLen = 3.6, rHeadWidth = 2.2;
+        var rBackX = to.x - ux*rHeadLen, rBackY = to.y - uy*rHeadLen;
+        var rPerpX = -uy, rPerpY = ux;
+        var rp1x = rBackX + rPerpX*rHeadWidth, rp1y = rBackY + rPerpY*rHeadWidth;
+        var rp2x = rBackX - rPerpX*rHeadWidth, rp2y = rBackY - rPerpY*rHeadWidth;
+        var refHead = document.createElementNS('http://www.w3.org/2000/svg','path');
+        refHead.setAttribute('d', 'M '+to.x.toFixed(2)+' '+to.y.toFixed(2)+' L '+rp1x.toFixed(2)+' '+rp1y.toFixed(2)+' L '+rp2x.toFixed(2)+' '+rp2y.toFixed(2)+' Z');
+        refHead.setAttribute('fill','var(--good)');
+        svg.appendChild(refHead);
+      }
+    }
+    if(!wasCorrect){
+      if(q.legs){
+        // Multi-leg cut (e.g. a fake then a break): draw each leg in sequence so the
+        // reference shows the actual shape, not one averaged vector.
+        var legFrom = q.startPoint;
+        q.legs.forEach(function(leg, i){
+          var laRad = leg.angle * Math.PI/180;
+          var lux = Math.cos(laRad), luy = -Math.sin(laRad);
+          var legDist = Math.max(leg.minDist, leg.minDist + 4);
+          var legTo = {x: legFrom.x + lux*legDist, y: legFrom.y + luy*legDist};
+          drawRefSegment(legFrom, legTo, i === q.legs.length-1);
+          legFrom = legTo;
+        });
+      } else {
+        var iaRad = q.idealAngle * Math.PI/180;
+        var iux = Math.cos(iaRad), iuy = -Math.sin(iaRad);
+        var iEnd = {x: q.startPoint.x + iux*q.idealDist, y: q.startPoint.y + iuy*q.idealDist};
+        drawRefSegment(q.startPoint, iEnd, true);
+      }
+    }
+
+    var banner = document.getElementById('result-banner');
+    banner.className = 'result-banner show ' + (wasCorrect ? 'good' : 'bad');
+    banner.textContent = wasCorrect ? 'That\'s the right shape of cut.' : 'Not quite — the dashed line is the right cut.';
+
+    finishQuestion(wasCorrect, null);
+  });
+}
+
+function finishQuestion(wasCorrect, explainHtml){
+  var ex = document.getElementById('explain');
+  if(explainHtml){
+    ex.innerHTML = '<b>'+(wasCorrect?'Yep — ':'Here\'s the read: ')+'</b>' + explainHtml;
+    ex.classList.add('show');
+  } else {
+    ex.classList.remove('show');
+    ex.innerHTML = '';
+  }
+
+  // If this question was already answered once (revisited via the back/next arrows),
+  // replace its prior pick instead of counting it twice toward the score.
+  var existing = picks.filter(function(p){ return p.q === current; })[0];
+  if(existing){
+    if(existing.correct && !wasCorrect) scoreCount--;
+    if(!existing.correct && wasCorrect) scoreCount++;
+    existing.correct = wasCorrect;
+  } else {
+    if(wasCorrect) scoreCount++;
+    picks.push({q:current, correct:wasCorrect});
+  }
+  scoreChip.textContent = scoreCount + ' correct';
+
+  var nextInline = document.getElementById('inline-next-btn');
+  if(nextInline){
+    nextInline.textContent = current >= Q.length - 1 ? 'See results' : 'Next';
+    nextInline.classList.add('show');
+  }
+}
+
+function goNext(){
+  if(current >= Q.length - 1){
+    showResults();
+  } else {
+    current++;
+    renderQuestion();
+  }
+}
+
+function goPrev(){
+  if(current <= 0) return;
+  current--;
+  renderQuestion();
+}
+
+function showResults(){
+  quizArea.style.display = 'none';
+  resultsArea.style.display = 'block';
+  progFill.style.width = '100%';
+
+  var pct = Math.round(scoreCount / Q.length * 100);
+  var msg;
+  if(pct === 100) msg = 'Field general. You know every call cold.';
+  else if(pct >= 75) msg = 'Solid. A couple calls to review before Friday.';
+  else if(pct >= 50) msg = 'Getting there — spend some time with the spread plays.';
+  else msg = 'Time for a playbook re-read before next practice.';
+
+  var html = '<div class="card results">';
+  html += '<h2>'+msg+'</h2>';
+  html += '<div class="big-score">'+scoreCount+'<span style="font-size:28px;color:var(--ink-soft);">/'+Q.length+'</span></div>';
+  html += '<p>'+pct+'% — Slow 2026 Field IQ</p>';
+  html += '<div class="review-list">';
+  picks.forEach(function(p){
+    var q = Q[p.q];
+    html += '<div class="review-item '+(p.correct?'right':'wrong')+'"><span class="dot">'+(p.correct?'✓':'✗')+'</span><span>'+q.section+': '+stripHtml(q.prompt)+'</span></div>';
+  });
+  html += '</div>';
+  html += '<button class="restart-btn" id="restart-btn">Play again</button>';
+  html += '</div>';
+  resultsArea.innerHTML = html;
+  document.getElementById('restart-btn').addEventListener('click', restart);
+}
+
+function stripHtml(s){
+  var d = document.createElement('div');
+  d.innerHTML = s;
+  return d.textContent;
+}
+
+function restart(){
+  current = 0;
+  scoreCount = 0;
+  picks = [];
+  quizArea.style.display = 'block';
+  resultsArea.style.display = 'none';
+  renderQuestion();
+}
+
+renderQuestion();
+})();
+</script>

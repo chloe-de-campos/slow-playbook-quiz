@@ -1,0 +1,655 @@
+<title>Slow Field IQ — Diagram Editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Karla:wght@400;500;700&display=swap');
+
+:root{
+  --bg:#eef1e9;
+  --bg-raise:#ffffff;
+  --field:#d8e3d2;
+  --field-line:#8fae87;
+  --ink:#22301f;
+  --ink-soft:#5c6b57;
+  --accent:#e0622c;
+  --accent-ink:#ffffff;
+  --defender:#b98a2e;
+  --good:#3f7d4d;
+  --bad:#c24444;
+  --ref:#5c7a53;
+  --card-border:#d3dbc9;
+  --shadow:0 1px 2px rgba(34,48,31,0.06), 0 8px 24px -12px rgba(34,48,31,0.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151c14; --bg-raise:#1d2619; --field:#22301f; --field-line:#4a6142;
+    --ink:#eef1e9; --ink-soft:#a6b39e; --accent:#f07940; --accent-ink:#1a1207;
+    --defender:#d9a94a; --good:#5fae72; --bad:#e07070; --ref:#8fae87;
+    --card-border:#33422d; --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151c14; --bg-raise:#1d2619; --field:#22301f; --field-line:#4a6142;
+  --ink:#eef1e9; --ink-soft:#a6b39e; --accent:#f07940; --accent-ink:#1a1207;
+  --defender:#d9a94a; --good:#5fae72; --bad:#e07070; --ref:#8fae87;
+  --card-border:#33422d; --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);font-family:'Karla',system-ui,sans-serif;min-height:100vh;}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
+h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;margin:0 0 4px;}
+.sub{color:var(--ink-soft);font-size:13px;margin:0 0 18px;}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;}
+@media (max-width:820px){.layout{grid-template-columns:1fr;}}
+
+.panel{background:var(--bg-raise);border:1px solid var(--card-border);border-radius:14px;box-shadow:var(--shadow);padding:16px;}
+
+.play-select{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.play-chip{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:0.02em;text-transform:uppercase;
+  padding:7px 11px;border-radius:8px;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink-soft);cursor:pointer;
+}
+.play-chip.active{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, var(--bg-raise));}
+
+.field-wrap{position:relative;border-radius:10px;overflow:hidden;background:var(--field);}
+#field-svg{width:100%;height:auto;display:block;touch-action:none;}
+
+.mode-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
+.mode-btn{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.02em;text-transform:uppercase;
+  padding:9px 12px;border-radius:9px;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink);cursor:pointer;
+}
+.mode-btn.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+
+.field-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.field-actions button{
+  font-family:'Karla',sans-serif;font-weight:700;font-size:12.5px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--card-border);background:transparent;color:var(--ink-soft);cursor:pointer;
+}
+.field-actions button.danger{color:var(--bad);border-color:var(--bad);}
+
+.hint{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-top:10px;padding:10px 12px;background:var(--field);border-radius:9px;}
+.hint b{color:var(--ink);}
+
+.side h2{font-family:'Barlow Condensed',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:0.03em;margin:0 0 10px;color:var(--ink-soft);}
+.elem-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:220px;overflow-y:auto;}
+.elem-row{
+  display:flex;align-items:center;gap:8px;font-size:12.5px;padding:7px 9px;border-radius:8px;background:var(--field);
+}
+.elem-row .swatch{width:10px;height:10px;border-radius:50%;flex:none;}
+.elem-row .lbl{flex:1;font-weight:600;}
+.elem-row button{border:none;background:transparent;color:var(--bad);cursor:pointer;font-size:14px;padding:0 3px;}
+
+.field-group{margin-bottom:14px;}
+.field-group label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:5px;}
+.field-group input[type=text]{
+  width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--card-border);background:var(--bg);color:var(--ink);font-family:'Karla',sans-serif;font-size:13px;
+}
+
+textarea#json-out, textarea#json-in, textarea#json-in-all{
+  width:100%;height:180px;font-family:ui-monospace,monospace;font-size:11px;padding:10px;border-radius:8px;border:1.5px solid var(--card-border);background:var(--bg);color:var(--ink);resize:vertical;
+}
+.export-btn{
+  width:100%;margin-top:8px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:9px;padding:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.03em;text-transform:uppercase;cursor:pointer;
+}
+</style>
+
+<div class="wrap">
+  <h1>Slow Field IQ — Diagram Editor</h1>
+  <p class="sub">Arrange players, draw reference movement, and draw the graded answer path for each play. Export when done — send the JSON back and it gets wired straight into the quiz.</p>
+
+  <div class="play-select" id="play-select"></div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="field-wrap">
+        <svg id="field-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="player" id="mode-player">+ Player</button>
+        <input type="text" id="next-label-input" placeholder="label (A, B…)" maxlength="3" style="width:88px;padding:8px 10px;border-radius:9px;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink);font-family:'Karla',sans-serif;font-size:13px;">
+        <button class="mode-btn" data-mode="you" id="mode-you">+ You (Y)</button>
+        <button class="mode-btn" data-mode="disc" id="mode-disc">+ Disc</button>
+        <button class="mode-btn" data-mode="mark" id="mode-mark">+ Mark (X)</button>
+        <button class="mode-btn" data-mode="sideline" id="mode-sideline">+ Sideline</button>
+        <button class="mode-btn" data-mode="ref-arrow" id="mode-ref">+ Reference arrow</button>
+        <button class="mode-btn" data-mode="answer" id="mode-answer">+ Answer path</button>
+        <button class="mode-btn" data-mode="select" id="mode-select">Move / Select</button>
+        <button class="mode-btn" data-mode="delete" id="mode-delete">Delete (click item)</button>
+      </div>
+      <div class="field-actions">
+        <button id="undo-btn">Undo last</button>
+        <button id="clear-answer-btn">Clear answer path</button>
+        <button id="clear-refs-btn">Clear reference arrows</button>
+        <button class="danger" id="clear-all-btn">Clear this play</button>
+      </div>
+      <div class="hint" id="mode-hint"><b>+ Player:</b> type a label (A, B, C…) in the box next to this button, then click the field to drop a teammate dot with that label. Leave the box blank for an unlabeled dot.</div>
+    </div>
+
+    <div class="panel side">
+      <h2>Elements on this play</h2>
+      <div class="elem-list" id="elem-list"></div>
+
+      <div class="field-group">
+        <label>Prompt / instructions</label>
+        <input type="text" id="prompt-input" placeholder="What the player is told before drawing">
+      </div>
+
+      <div class="field-group">
+        <label>Duplicate this play into…</label>
+        <select id="duplicate-select" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--card-border);background:var(--bg);color:var(--ink);font-family:'Karla',sans-serif;font-size:13px;"></select>
+        <button id="duplicate-btn" style="width:100%;margin-top:8px;background:transparent;border:1.5px solid var(--accent);color:var(--accent);border-radius:9px;padding:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.03em;text-transform:uppercase;cursor:pointer;">Copy into selected play</button>
+      </div>
+
+      <h2>Export</h2>
+      <button class="export-btn" id="export-btn">Export all plays as JSON</button>
+      <textarea id="json-out" readonly placeholder="Click export to generate JSON here"></textarea>
+
+      <h2 style="margin-top:16px;">Import</h2>
+      <div style="font-size:12px;color:var(--muted, #7a8577);margin-bottom:6px;">Paste one play object's JSON (players/discs/marks/sidelines/prompt) below and click Import — it replaces the currently selected play tab above.</div>
+      <textarea id="json-in" placeholder="Paste a single play object's JSON here"></textarea>
+      <button class="export-btn" id="import-btn" style="margin-top:8px;">Import into current play</button>
+
+      <h2 style="margin-top:16px;">Import all</h2>
+      <div style="font-size:12px;color:var(--muted, #7a8577);margin-bottom:6px;">Paste a full export blob (play name → play object) below and click Import all — it replaces every matching tab above at once.</div>
+      <textarea id="json-in-all" placeholder="Paste the full exported JSON here"></textarea>
+      <button class="export-btn" id="import-all-btn" style="margin-top:8px;">Import all plays</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var VB_W = 100, VB_H = 140;
+
+  var PLAYS = [
+    'Default','Planets B','Planets D','Planets A','Pluto','Big Apple','Mega-T','T-2','Jacket','See Ya','T-2 B','Planets C','See Ya B'
+  ];
+
+  // state[playName] = {players:[{id,x,y,kind:'player'|'you',label}], discs:[{id,x,y}],
+  //   marks:[{id,x,y}], sidelines:[{id,x}], refArrows:[{id,pts:[[x,y],...]}],
+  //   answerPath:{pts:[[x,y],...]} or null, prompt:''}
+  var state = {};
+  PLAYS.forEach(function(p){
+    state[p] = {players:[], discs:[], marks:[], sidelines:[], refArrows:[], answerPath:null, prompt:''};
+  });
+
+  var currentPlay = PLAYS[0];
+  var mode = 'player';
+  var nextId = 1;
+
+  // Chronological undo history, per play: array of {type, id} entries in the order
+  // things were added, so "undo" always removes whatever was actually added last —
+  // not a guess based on category priority.
+  var history = {};
+  PLAYS.forEach(function(p){ history[p] = []; });
+  function track(type, id){
+    history[currentPlay].push({type:type, id:id});
+  }
+
+  var svg = document.getElementById('field-svg');
+  var playSelectHost = document.getElementById('play-select');
+  var elemListHost = document.getElementById('elem-list');
+  var promptInput = document.getElementById('prompt-input');
+  var modeHint = document.getElementById('mode-hint');
+
+  var hints = {
+    player: '<b>+ Player:</b> type a label (A, B, C…) in the box next to this button, then click the field to drop a teammate dot with that label. Leave the box blank for an unlabeled dot.',
+    you: '<b>+ You (Y):</b> click the field to place the labeled player whose cut gets graded.',
+    disc: '<b>+ Disc:</b> click to place the disc / thrower position.',
+    mark: '<b>+ Mark (X):</b> click to place a defender/mark on a specific player — a plain X, not attached to any one cutter\'s path.',
+    sideline: '<b>+ Sideline:</b> click to place a vertical sideline line at that x position.',
+    'ref-arrow': '<b>+ Reference arrow:</b> click-drag on the field to draw a reference movement arrow (shown but not graded). Release to finish one arrow, then drag again for another.',
+    answer: '<b>+ Answer path:</b> click-drag to draw the correct cut path — this is what the quiz grades against. Only one per play; drawing a new one replaces the old.',
+    select: '<b>Select / Move:</b> drag any dot, mark, disc, or sideline to reposition it.',
+    'delete': '<b>Delete:</b> click any player, disc, mark, sideline, or the answer path/reference arrows themselves to remove just that item. Click a reference arrow or the answer path\'s line directly to delete it.'
+  };
+
+  function buildPlaySelector(){
+    playSelectHost.innerHTML = '';
+    PLAYS.forEach(function(p){
+      var b = document.createElement('button');
+      b.className = 'play-chip' + (p===currentPlay?' active':'');
+      b.textContent = p;
+      b.addEventListener('click', function(){ currentPlay = p; promptInput.value = state[p].prompt; render(); buildPlaySelector(); buildDupSelect(); });
+      playSelectHost.appendChild(b);
+    });
+  }
+
+  function setMode(m){
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-mode')===m);
+    });
+    modeHint.innerHTML = hints[m];
+  }
+  document.getElementById('mode-player').addEventListener('click', function(){setMode('player');});
+  document.getElementById('mode-you').addEventListener('click', function(){setMode('you');});
+  document.getElementById('mode-disc').addEventListener('click', function(){setMode('disc');});
+  document.getElementById('mode-mark').addEventListener('click', function(){setMode('mark');});
+  document.getElementById('mode-sideline').addEventListener('click', function(){setMode('sideline');});
+  document.getElementById('mode-ref').addEventListener('click', function(){setMode('ref-arrow');});
+  document.getElementById('mode-answer').addEventListener('click', function(){setMode('answer');});
+  document.getElementById('mode-select').addEventListener('click', function(){setMode('select');});
+  document.getElementById('mode-delete').addEventListener('click', function(){setMode('delete');});
+
+  promptInput.addEventListener('input', function(){ state[currentPlay].prompt = promptInput.value; });
+
+  function svgPoint(evt){
+    var rect = svg.getBoundingClientRect();
+    var x = (evt.clientX - rect.left) / rect.width * VB_W;
+    var y = (evt.clientY - rect.top) / rect.height * VB_H;
+    x = Math.max(0, Math.min(VB_W, x));
+    y = Math.max(0, Math.min(VB_H, y));
+    return {x:x, y:y};
+  }
+
+  var dragging = null; // {type, id} for select-mode drag
+  var drawingArrow = null; // pts array while drawing ref/answer
+
+  function el(tag, attrs){
+    var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(var k in attrs){ e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+
+  function render(){
+    svg.innerHTML = '';
+    var s = state[currentPlay];
+
+    // midfield guide
+    svg.appendChild(el('line',{x1:0,y1:70,x2:100,y2:70,stroke:'var(--field-line)','stroke-width':0.4,'stroke-dasharray':'2,2',opacity:0.4}));
+
+    s.sidelines.forEach(function(sl){
+      svg.appendChild(el('line',{x1:sl.x,y1:0,x2:sl.x,y2:140,stroke:'var(--field-line)','stroke-width':0.6,opacity:0.8,'data-id':sl.id,'data-type':'sideline'}));
+    });
+
+    s.discs.forEach(function(d){
+      var g = el('g',{'data-id':d.id,'data-type':'disc',cursor:'grab'});
+      g.appendChild(el('circle',{cx:d.x,cy:d.y,r:2.6,fill:'none',stroke:'var(--ink)','stroke-width':1.1}));
+      g.appendChild(el('circle',{cx:d.x,cy:d.y,r:1,fill:'var(--ink)'}));
+      svg.appendChild(g);
+    });
+
+    s.marks.forEach(function(m){
+      var g = el('g',{'data-id':m.id,'data-type':'mark',cursor:'grab'});
+      var t = el('text',{x:m.x,y:m.y+2.6,'font-size':7.5,'font-weight':700,'text-anchor':'middle',fill:'var(--defender)'});
+      t.textContent = 'X';
+      g.appendChild(t);
+      svg.appendChild(g);
+    });
+
+    s.refArrows.forEach(function(a){
+      var pts = a.pts;
+      var d = 'M ' + pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' L ');
+      var mid = 'ref'+a.id;
+      var marker = el('marker',{id:mid,markerWidth:6,markerHeight:6,refX:4.5,refY:3,orient:'auto'});
+      marker.appendChild(el('path',{d:'M0,0 L6,3 L0,6 Z',fill:'var(--ref)'}));
+      var defs = el('defs',{});
+      defs.appendChild(marker);
+      svg.appendChild(defs);
+      // invisible fat hit-stroke so the thin arrow is easy to click/tap for delete
+      svg.appendChild(el('path',{d:d,fill:'none',stroke:'transparent','stroke-width':5,'data-id':a.id,'data-type':'ref-arrow',cursor:'pointer'}));
+      svg.appendChild(el('path',{d:d,fill:'none',stroke:'var(--ref)','stroke-width':0.9,'stroke-dasharray':'2,1.6','marker-end':'url(#'+mid+')','pointer-events':'none'}));
+    });
+
+    if(s.answerPath){
+      var pts2 = s.answerPath.pts;
+      var d2 = 'M ' + pts2.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' L ');
+      var mid2 = 'answer-marker';
+      var marker2 = el('marker',{id:mid2,markerWidth:7,markerHeight:7,refX:5,refY:3.5,orient:'auto'});
+      marker2.appendChild(el('path',{d:'M0,0 L7,3.5 L0,7 Z',fill:'var(--accent)'}));
+      var defs2 = el('defs',{});
+      defs2.appendChild(marker2);
+      svg.appendChild(defs2);
+      svg.appendChild(el('path',{d:d2,fill:'none',stroke:'transparent','stroke-width':6,'data-type':'answer-path',cursor:'pointer'}));
+      svg.appendChild(el('path',{d:d2,fill:'none',stroke:'var(--accent)','stroke-width':1.6,'stroke-linecap':'round','stroke-linejoin':'round','marker-end':'url(#'+mid2+')','pointer-events':'none'}));
+    }
+
+    s.players.forEach(function(p){
+      var isYou = p.kind === 'you';
+      var g = el('g',{'data-id':p.id,'data-type':'player',cursor:'grab'});
+      if(isYou){
+        g.appendChild(el('circle',{cx:p.x,cy:p.y,r:6.2,fill:'none',stroke:'var(--accent)','stroke-width':1,'stroke-dasharray':'1.6,1.4'}));
+      }
+      g.appendChild(el('circle',{cx:p.x,cy:p.y,r:4.2,fill:isYou?'var(--accent)':'var(--field-line)',stroke:isYou?'none':'var(--card-border)','stroke-width':1}));
+      if(p.label){
+        var t = el('text',{x:p.x,y:p.y+1.5,'font-size':4.4,'font-weight':700,'text-anchor':'middle',fill:'var(--bg-raise)','font-family':'Barlow Condensed, sans-serif'});
+        t.textContent = p.label;
+        g.appendChild(t);
+      }
+      svg.appendChild(g);
+    });
+
+    renderElemList();
+  }
+
+  function renderElemList(){
+    var s = state[currentPlay];
+    elemListHost.innerHTML = '';
+    function row(swatchColor, text, onDelete){
+      var r = document.createElement('div');
+      r.className = 'elem-row';
+      var sw = document.createElement('div');
+      sw.className = 'swatch';
+      sw.style.background = swatchColor;
+      var lbl = document.createElement('div');
+      lbl.className = 'lbl';
+      lbl.textContent = text;
+      var del = document.createElement('button');
+      del.textContent = '✕';
+      del.addEventListener('click', onDelete);
+      r.appendChild(sw); r.appendChild(lbl); r.appendChild(del);
+      elemListHost.appendChild(r);
+    }
+    s.players.forEach(function(p){
+      row(p.kind==='you'?'#e0622c':'#8fae87', (p.kind==='you'?'You: ':'Player: ')+(p.label||'(unlabeled)')+' ('+p.x.toFixed(0)+','+p.y.toFixed(0)+')', function(){
+        s.players = s.players.filter(function(pp){return pp.id!==p.id;});
+        render();
+      });
+    });
+    s.discs.forEach(function(d){
+      row('#22301f', 'Disc ('+d.x.toFixed(0)+','+d.y.toFixed(0)+')', function(){
+        s.discs = s.discs.filter(function(dd){return dd.id!==d.id;});
+        render();
+      });
+    });
+    s.marks.forEach(function(m){
+      row('#b98a2e', 'Mark X ('+m.x.toFixed(0)+','+m.y.toFixed(0)+')', function(){
+        s.marks = s.marks.filter(function(mm){return mm.id!==m.id;});
+        render();
+      });
+    });
+    s.sidelines.forEach(function(sl){
+      row('#5c6b57', 'Sideline @ x='+sl.x.toFixed(0), function(){
+        s.sidelines = s.sidelines.filter(function(ss){return ss.id!==sl.id;});
+        render();
+      });
+    });
+    s.refArrows.forEach(function(a,i){
+      row('#5c7a53', 'Reference arrow #'+(i+1)+' ('+a.pts.length+' pts)', function(){
+        s.refArrows = s.refArrows.filter(function(rr){return rr.id!==a.id;});
+        render();
+      });
+    });
+    if(s.answerPath){
+      row('#e0622c', 'Answer path ('+s.answerPath.pts.length+' pts)', function(){
+        s.answerPath = null;
+        render();
+      });
+    }
+  }
+
+  // ---------- pointer interactions ----------
+  svg.addEventListener('pointerdown', function(evt){
+    var p = svgPoint(evt);
+    var s = state[currentPlay];
+
+    if(mode === 'player' || mode === 'you'){
+      var lbl = mode === 'you' ? 'Y' : (document.getElementById('next-label-input').value.trim() || '');
+      var newId = nextId++;
+      s.players.push({id:newId, x:p.x, y:p.y, kind: mode==='you'?'you':'player', label: mode==='you'?'Y':lbl});
+      track('players', newId);
+      render();
+      return;
+    }
+    if(mode === 'disc'){
+      var discId = nextId++;
+      s.discs.push({id:discId, x:p.x, y:p.y});
+      track('discs', discId);
+      render();
+      return;
+    }
+    if(mode === 'mark'){
+      var markId = nextId++;
+      s.marks.push({id:markId, x:p.x, y:p.y});
+      track('marks', markId);
+      render();
+      return;
+    }
+    if(mode === 'sideline'){
+      var slId = nextId++;
+      s.sidelines.push({id:slId, x:p.x});
+      track('sidelines', slId);
+      render();
+      return;
+    }
+    if(mode === 'ref-arrow'){
+      drawingArrow = {kind:'ref', pts:[[p.x,p.y]]};
+      evt.preventDefault();
+      return;
+    }
+    if(mode === 'answer'){
+      drawingArrow = {kind:'answer', pts:[[p.x,p.y]]};
+      evt.preventDefault();
+      return;
+    }
+    if(mode === 'select'){
+      var target = evt.target.closest('[data-type]');
+      if(!target) return;
+      var type = target.getAttribute('data-type');
+      var id = parseInt(target.getAttribute('data-id'));
+      if(type === 'player'){
+        dragging = {type:'player', id:id};
+      } else if(type === 'disc'){
+        dragging = {type:'disc', id:id};
+      } else if(type === 'mark'){
+        dragging = {type:'mark', id:id};
+      } else if(type === 'sideline'){
+        dragging = {type:'sideline', id:id};
+      }
+      evt.preventDefault();
+      return;
+    }
+    if(mode === 'delete'){
+      var delTarget = evt.target.closest('[data-type]');
+      if(!delTarget) return;
+      var delType = delTarget.getAttribute('data-type');
+      var delIdAttr = delTarget.getAttribute('data-id');
+      var delId = delIdAttr !== null ? parseInt(delIdAttr) : null;
+      if(delType === 'player'){
+        s.players = s.players.filter(function(x){return x.id!==delId;});
+      } else if(delType === 'disc'){
+        s.discs = s.discs.filter(function(x){return x.id!==delId;});
+      } else if(delType === 'mark'){
+        s.marks = s.marks.filter(function(x){return x.id!==delId;});
+      } else if(delType === 'sideline'){
+        s.sidelines = s.sidelines.filter(function(x){return x.id!==delId;});
+      } else if(delType === 'ref-arrow'){
+        s.refArrows = s.refArrows.filter(function(x){return x.id!==delId;});
+      } else if(delType === 'answer-path'){
+        s.answerPath = null;
+      }
+      render();
+      evt.preventDefault();
+      return;
+    }
+  });
+
+  svg.addEventListener('pointermove', function(evt){
+    var p = svgPoint(evt);
+    if(drawingArrow){
+      drawingArrow.pts.push([p.x,p.y]);
+      // live preview: redraw temp path
+      previewDrawing();
+      evt.preventDefault();
+      return;
+    }
+    if(dragging){
+      var s = state[currentPlay];
+      if(dragging.type === 'player'){
+        var pl = s.players.find(function(pp){return pp.id===dragging.id;});
+        if(pl){ pl.x = p.x; pl.y = p.y; render(); }
+      } else if(dragging.type === 'disc'){
+        var dc = s.discs.find(function(dd){return dd.id===dragging.id;});
+        if(dc){ dc.x = p.x; dc.y = p.y; render(); }
+      } else if(dragging.type === 'mark'){
+        var mk = s.marks.find(function(mm){return mm.id===dragging.id;});
+        if(mk){ mk.x = p.x; mk.y = p.y; render(); }
+      } else if(dragging.type === 'sideline'){
+        var sl = s.sidelines.find(function(ss){return ss.id===dragging.id;});
+        if(sl){ sl.x = p.x; render(); }
+      }
+      evt.preventDefault();
+    }
+  });
+
+  function previewDrawing(){
+    var existing = svg.querySelector('#temp-draw-path');
+    if(existing) existing.remove();
+    var pts = drawingArrow.pts;
+    var d = 'M ' + pts.map(function(pt){return pt[0].toFixed(1)+' '+pt[1].toFixed(1);}).join(' L ');
+    var color = drawingArrow.kind === 'answer' ? 'var(--accent)' : 'var(--ref)';
+    svg.appendChild(el('path',{id:'temp-draw-path',d:d,fill:'none',stroke:color,'stroke-width':1.4,'stroke-dasharray':drawingArrow.kind==='ref'?'2,1.6':'none','stroke-linecap':'round'}));
+  }
+
+  window.addEventListener('pointerup', function(){
+    if(drawingArrow){
+      var s = state[currentPlay];
+      if(drawingArrow.pts.length > 2){
+        if(drawingArrow.kind === 'ref'){
+          var arrowId = nextId++;
+          s.refArrows.push({id:arrowId, pts:drawingArrow.pts});
+          track('refArrows', arrowId);
+        } else {
+          s.answerPath = {pts:drawingArrow.pts};
+          track('answerPath', null);
+        }
+      }
+      drawingArrow = null;
+      render();
+    }
+    dragging = null;
+  });
+
+  document.getElementById('undo-btn').addEventListener('click', function(){
+    var s = state[currentPlay];
+    var h = history[currentPlay];
+    // Pop history entries until we find one that still corresponds to something
+    // present in state (a manual sidebar delete may have already removed it).
+    while(h.length){
+      var last = h.pop();
+      if(last.type === 'answerPath'){
+        if(s.answerPath){ s.answerPath = null; render(); return; }
+        continue;
+      }
+      var list = s[last.type];
+      var idx = list.findIndex(function(item){ return item.id === last.id; });
+      if(idx !== -1){
+        list.splice(idx,1);
+        render();
+        return;
+      }
+      // wasn't found (already deleted another way) — keep unwinding history
+    }
+  });
+  document.getElementById('clear-answer-btn').addEventListener('click', function(){
+    state[currentPlay].answerPath = null; render();
+  });
+  document.getElementById('clear-refs-btn').addEventListener('click', function(){
+    state[currentPlay].refArrows = []; render();
+  });
+  document.getElementById('clear-all-btn').addEventListener('click', function(){
+    state[currentPlay] = {players:[], discs:[], marks:[], sidelines:[], refArrows:[], answerPath:null, prompt:state[currentPlay].prompt};
+    history[currentPlay] = [];
+    render();
+  });
+
+  // ---------- duplicate ----------
+  var dupSelect = document.getElementById('duplicate-select');
+  function buildDupSelect(){
+    dupSelect.innerHTML = '';
+    PLAYS.forEach(function(p){
+      if(p === currentPlay) return;
+      var o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      dupSelect.appendChild(o);
+    });
+  }
+  var dupStatus = document.createElement('div');
+  dupStatus.style.cssText = 'font-size:11.5px;color:var(--good);margin-top:6px;min-height:14px;';
+  document.getElementById('duplicate-btn').insertAdjacentElement('afterend', dupStatus);
+
+  document.getElementById('duplicate-btn').addEventListener('click', function(){
+    var target = dupSelect.value;
+    if(!target){ dupStatus.textContent = 'No play selected to copy into.'; dupStatus.style.color = 'var(--bad)'; return; }
+    var srcCopy = JSON.parse(JSON.stringify(state[currentPlay]));
+    // reassign fresh ids so dragging/deleting in the new play doesn't collide with the source
+    srcCopy.players.forEach(function(x){ x.id = nextId++; });
+    srcCopy.discs.forEach(function(x){ x.id = nextId++; });
+    srcCopy.marks.forEach(function(x){ x.id = nextId++; });
+    srcCopy.sidelines.forEach(function(x){ x.id = nextId++; });
+    srcCopy.refArrows.forEach(function(x){ x.id = nextId++; });
+    var fromPlay = currentPlay;
+    state[target] = srcCopy;
+    history[target] = [];
+    currentPlay = target;
+    promptInput.value = state[target].prompt;
+    render();
+    buildPlaySelector();
+    buildDupSelect();
+    dupStatus.style.color = 'var(--good)';
+    dupStatus.textContent = 'Copied ' + fromPlay + ' → ' + target + '. Now editing ' + target + '.';
+  });
+
+  document.getElementById('export-btn').addEventListener('click', function(){
+    document.getElementById('json-out').value = JSON.stringify(state, null, 2);
+  });
+
+  document.getElementById('import-btn').addEventListener('click', function(){
+    var raw = document.getElementById('json-in').value.trim();
+    if(!raw) return;
+    var obj;
+    try { obj = JSON.parse(raw); } catch(e){ alert('Invalid JSON: ' + e.message); return; }
+    var incoming = {
+      players: obj.players || [],
+      discs: obj.discs || [],
+      marks: obj.marks || [],
+      sidelines: obj.sidelines || [],
+      refArrows: obj.refArrows || [],
+      answerPath: obj.answerPath || null,
+      prompt: obj.prompt || ''
+    };
+    ['players','discs','marks','sidelines'].forEach(function(k){
+      incoming[k].forEach(function(x){ x.id = nextId++; });
+    });
+    incoming.refArrows.forEach(function(a){ a.id = nextId++; });
+    state[currentPlay] = incoming;
+    promptInput.value = incoming.prompt;
+    render();
+  });
+
+  document.getElementById('import-all-btn').addEventListener('click', function(){
+    var raw = document.getElementById('json-in-all').value.trim();
+    if(!raw) return;
+    var obj;
+    try { obj = JSON.parse(raw); } catch(e){ alert('Invalid JSON: ' + e.message); return; }
+    var loaded = [], skipped = [];
+    PLAYS.forEach(function(name){
+      if(!obj[name]) { skipped.push(name); return; }
+      var src = obj[name];
+      var incoming = {
+        players: src.players || [],
+        discs: src.discs || [],
+        marks: src.marks || [],
+        sidelines: src.sidelines || [],
+        refArrows: src.refArrows || [],
+        answerPath: src.answerPath || null,
+        prompt: src.prompt || ''
+      };
+      ['players','discs','marks','sidelines'].forEach(function(k){
+        incoming[k].forEach(function(x){ x.id = nextId++; });
+      });
+      incoming.refArrows.forEach(function(a){ a.id = nextId++; });
+      state[name] = incoming;
+      loaded.push(name);
+    });
+    promptInput.value = state[currentPlay].prompt;
+    render();
+    alert('Loaded: ' + loaded.join(', ') + (skipped.length ? ('\n\nNo data found for: ' + skipped.join(', ')) : ''));
+  });
+
+  buildPlaySelector();
+  buildDupSelect();
+  render();
+})();
+</script>
