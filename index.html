@@ -87,7 +87,7 @@ body{
   background:color-mix(in srgb, var(--defender) 14%, var(--bg-raise));
   border:1px solid color-mix(in srgb, var(--defender) 35%, var(--card-border));
   border-radius:12px;
-  padding:10px 34px 10px 14px;
+  padding:10px 42px 10px 14px;
   font-size:12.5px;
   line-height:1.5;
   color:var(--ink-soft);
@@ -105,20 +105,21 @@ body{
 }
 .disclaimer-close{
   position:absolute;
-  top:8px;
-  right:8px;
-  width:22px;
-  height:22px;
+  top:4px;
+  right:4px;
+  width:38px;
+  height:38px;
   border:none;
   background:transparent;
   color:var(--ink-soft);
   font-size:16px;
   line-height:1;
   cursor:pointer;
-  border-radius:6px;
+  border-radius:8px;
   display:flex;
   align-items:center;
   justify-content:center;
+  -webkit-tap-highlight-color:transparent;
 }
 .disclaimer-close:hover{background:color-mix(in srgb, var(--defender) 22%, transparent);color:var(--ink);}
 .progress-row{
@@ -162,6 +163,13 @@ body{
   box-shadow:var(--shadow);
   overflow:hidden;
   margin-bottom:10px;
+  opacity:1;
+  transform:translateY(0);
+  transition:opacity 0.22s ease, transform 0.22s ease;
+}
+.card.card-enter{
+  opacity:0;
+  transform:translateY(8px);
 }
 .card-head{
   padding:12px 18px 8px;
@@ -202,6 +210,18 @@ body{
 }
 .field-svg.drawable{cursor:crosshair;}
 
+.start-hint-ring{
+  pointer-events:none;
+  transform-box:fill-box;
+  transform-origin:center;
+  animation:startHintPulse 1.6s ease-in-out infinite;
+}
+@keyframes startHintPulse{
+  0%{transform:scale(0.85);opacity:0.85;}
+  70%{transform:scale(1.7);opacity:0;}
+  100%{transform:scale(1.7);opacity:0;}
+}
+
 .draw-actions{
   display:flex;
   gap:10px;
@@ -214,8 +234,9 @@ body{
   letter-spacing:0.03em;
   text-transform:uppercase;
   border-radius:11px;
-  padding:9px;
+  padding:12px;
   cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
 }
 .clear-btn{
   flex:none;
@@ -240,8 +261,12 @@ body{
   font-weight:700;
   font-size:14px;
   display:none;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity 0.2s ease, transform 0.2s ease;
 }
 .result-banner.show{display:block;}
+.result-banner.show.in{opacity:1;transform:translateY(0);}
 .result-banner.good{background:color-mix(in srgb, var(--good) 16%, var(--bg-raise));color:var(--good);}
 .result-banner.bad{background:color-mix(in srgb, var(--bad) 16%, var(--bg-raise));color:var(--bad);}
 
@@ -260,8 +285,12 @@ body{
   letter-spacing:0.03em;
   text-transform:uppercase;
   cursor:pointer;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity 0.2s ease, transform 0.2s ease;
 }
 .inline-next-btn.show{display:block;}
+.inline-next-btn.show.in{opacity:1;transform:translateY(0);}
 
 .explain{
   margin:10px 18px 18px;
@@ -272,8 +301,12 @@ body{
   line-height:1.5;
   color:var(--ink);
   display:none;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity 0.2s ease, transform 0.2s ease;
 }
 .explain.show{display:block;}
+.explain.show.in{opacity:1;transform:translateY(0);}
 .explain b{color:var(--accent);}
 
 .nav-row{
@@ -282,8 +315,8 @@ body{
   gap:6px;
 }
 .nav-arrow{
-  width:28px;
-  height:28px;
+  width:36px;
+  height:36px;
   border-radius:50%;
   background:var(--bg-raise);
   border:1.5px solid var(--card-border);
@@ -293,6 +326,7 @@ body{
   justify-content:center;
   cursor:pointer;
   padding:0;
+  -webkit-tap-highlight-color:transparent;
 }
 .nav-arrow:active{transform:scale(0.94);}
 .nav-arrow:disabled{opacity:0.35;cursor:default;}
@@ -634,6 +668,29 @@ if(disclaimerCloseBtn){
   });
 }
 
+// ---------- motion helpers ----------
+var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+// Toggles an entrance-transition class on next frame so the browser has a chance to
+// register the "before" state first; skipped entirely under reduced motion.
+function revealIn(el){
+  if(!el) return;
+  if(reduceMotion){ el.classList.add('in'); return; }
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){ el.classList.add('in'); });
+  });
+}
+
+// Question cards start in the .card-enter (offset/transparent) state and settle into
+// the default .card state one frame later, giving Next/Prev a sense of direction.
+function animateCardIn(cardEl){
+  if(!cardEl || reduceMotion) return;
+  cardEl.classList.add('card-enter');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){ cardEl.classList.remove('card-enter'); });
+  });
+}
+
 // ---------- quiz engine ----------
 var current = 0;
 var scoreCount = 0;
@@ -674,6 +731,7 @@ function renderMcQuestion(q){
   html += '</div>';
   host.innerHTML = html;
   document.getElementById('inline-next-btn').addEventListener('click', goNext);
+  animateCardIn(host.querySelector('.card'));
 
   var optsHost = document.getElementById('opts');
   optsHost.className = 'field-key';
@@ -681,7 +739,7 @@ function renderMcQuestion(q){
   q.options.forEach(function(opt, i){
     var btn = document.createElement('button');
     btn.className = 'opt';
-    btn.style.cssText = 'text-align:left;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink);border-radius:11px;padding:12px 14px;font-family:Karla,sans-serif;font-size:14.5px;font-weight:500;line-height:1.4;cursor:pointer;';
+    btn.style.cssText = 'text-align:left;border:1.5px solid var(--card-border);background:var(--bg-raise);color:var(--ink);border-radius:11px;padding:12px 14px;font-family:Karla,sans-serif;font-size:14.5px;font-weight:500;line-height:1.4;cursor:pointer;transition:background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;';
     btn.innerHTML = opt.t;
     btn.addEventListener('click', function(){ chooseMc(i); });
     optsHost.appendChild(btn);
@@ -696,8 +754,13 @@ function chooseMc(i){
 
   buttons.forEach(function(b, idx){
     b.disabled = true;
-    if(idx === correctIdx){ b.style.borderColor='var(--good)'; b.style.background='color-mix(in srgb, var(--good) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✓</span>' + b.innerHTML; }
-    else if(idx === i){ b.style.borderColor='var(--bad)'; b.style.background='color-mix(in srgb, var(--bad) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✗</span>' + b.innerHTML; }
+    var apply = function(){
+      if(idx === correctIdx){ b.style.borderColor='var(--good)'; b.style.background='color-mix(in srgb, var(--good) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✓</span>' + b.innerHTML; if(idx===i) b.style.transform='scale(1.015)'; }
+      else if(idx === i){ b.style.borderColor='var(--bad)'; b.style.background='color-mix(in srgb, var(--bad) 14%, var(--bg-raise))'; b.innerHTML = '<span style="font-weight:700;margin-right:6px;">✗</span>' + b.innerHTML; }
+    };
+    if(idx !== correctIdx && idx !== i) return;
+    if(reduceMotion) apply();
+    else setTimeout(apply, idx * 40);
   });
 
   finishQuestion(wasCorrect, null);
@@ -717,6 +780,7 @@ function renderDrawQuestion(q){
   html += '</div>';
   host.innerHTML = html;
   document.getElementById('inline-next-btn').addEventListener('click', goNext);
+  animateCardIn(host.querySelector('.card'));
 
   var svg = document.querySelector('#draw-host svg');
   svg.classList.add('drawable');
@@ -724,6 +788,25 @@ function renderDrawQuestion(q){
   var pathEl = null;
   var drawing = false;
   var locked = false;
+
+  // First question only: a pulsing ring at the start point so it's obvious the field
+  // is drawable before anyone has to guess. Removed on the first touch/click.
+  var startHintEl = null;
+  if(current === 0){
+    startHintEl = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    startHintEl.setAttribute('class', 'start-hint-ring');
+    startHintEl.setAttribute('cx', q.startPoint.x);
+    startHintEl.setAttribute('cy', q.startPoint.y);
+    startHintEl.setAttribute('r', 6.5);
+    startHintEl.setAttribute('fill', 'none');
+    startHintEl.setAttribute('stroke', 'var(--accent)');
+    startHintEl.setAttribute('stroke-width', 1.2);
+    if(reduceMotion) startHintEl.style.animation = 'none';
+    svg.appendChild(startHintEl);
+  }
+  function clearStartHint(){
+    if(startHintEl){ startHintEl.remove(); startHintEl = null; }
+  }
 
   var checkBtn = document.getElementById('check-btn');
   var clearBtn = document.getElementById('clear-btn');
@@ -769,6 +852,7 @@ function renderDrawQuestion(q){
     if(locked || drawing) return;
     var p = svgPoint(evt);
     if(distTo(p, q.startPoint) > 14) return;
+    clearStartHint();
     drawing = true;
     activePointerId = evt.pointerId;
     // Use the real touch/click point as the path's first point (not the ideal startPoint) —
@@ -850,7 +934,14 @@ function renderDrawQuestion(q){
     var arrowHead = document.createElementNS('http://www.w3.org/2000/svg','path');
     arrowHead.setAttribute('d', 'M '+end.x.toFixed(2)+' '+end.y.toFixed(2)+' L '+p1x.toFixed(2)+' '+p1y.toFixed(2)+' L '+p2x.toFixed(2)+' '+p2y.toFixed(2)+' Z');
     arrowHead.setAttribute('fill', resultColor);
+    if(!reduceMotion){
+      arrowHead.style.opacity = '0';
+      arrowHead.style.transition = 'opacity 0.18s ease';
+    }
     svg.appendChild(arrowHead);
+    if(!reduceMotion){
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ arrowHead.style.opacity = '1'; }); });
+    }
 
     // When wrong, draw the correct answer directly on the field as a dashed reference
     // path, instead of just describing it in text.
@@ -863,9 +954,26 @@ function renderDrawQuestion(q){
       refLine.setAttribute('fill','none');
       refLine.setAttribute('stroke','var(--good)');
       refLine.setAttribute('stroke-width','1.4');
-      refLine.setAttribute('stroke-dasharray','3,2.4');
       refLine.setAttribute('stroke-linecap','round');
       svg.appendChild(refLine);
+      if(reduceMotion){
+        refLine.setAttribute('stroke-dasharray','3,2.4');
+      } else {
+        // Draw the reference line on as a solid stroke first (dashoffset animating
+        // to 0), then swap to the dashed pattern once it's fully drawn.
+        var totalLen = refLine.getTotalLength();
+        refLine.setAttribute('stroke-dasharray', totalLen);
+        refLine.setAttribute('stroke-dashoffset', totalLen);
+        refLine.style.transition = 'stroke-dashoffset 0.45s ease-out';
+        requestAnimationFrame(function(){
+          requestAnimationFrame(function(){ refLine.setAttribute('stroke-dashoffset', '0'); });
+        });
+        refLine.addEventListener('transitionend', function(){
+          refLine.style.transition = 'none';
+          refLine.setAttribute('stroke-dasharray','3,2.4');
+          refLine.removeAttribute('stroke-dashoffset');
+        }, {once:true});
+      }
       if(withHead){
         var rHeadLen = 3.6, rHeadWidth = 2.2;
         var rBackX = to.x - ux*rHeadLen, rBackY = to.y - uy*rHeadLen;
@@ -875,7 +983,14 @@ function renderDrawQuestion(q){
         var refHead = document.createElementNS('http://www.w3.org/2000/svg','path');
         refHead.setAttribute('d', 'M '+to.x.toFixed(2)+' '+to.y.toFixed(2)+' L '+rp1x.toFixed(2)+' '+rp1y.toFixed(2)+' L '+rp2x.toFixed(2)+' '+rp2y.toFixed(2)+' Z');
         refHead.setAttribute('fill','var(--good)');
+        if(!reduceMotion){
+          refHead.style.opacity = '0';
+          refHead.style.transition = 'opacity 0.15s ease';
+        }
         svg.appendChild(refHead);
+        if(!reduceMotion){
+          setTimeout(function(){ refHead.style.opacity = '1'; }, 420);
+        }
       }
     }
     if(!wasCorrect){
@@ -902,6 +1017,7 @@ function renderDrawQuestion(q){
     var banner = document.getElementById('result-banner');
     banner.className = 'result-banner show ' + (wasCorrect ? 'good' : 'bad');
     banner.textContent = wasCorrect ? 'That\'s the right shape of cut.' : 'Not quite — the dashed line is the right cut.';
+    revealIn(banner);
 
     finishQuestion(wasCorrect, null);
   });
@@ -912,6 +1028,7 @@ function finishQuestion(wasCorrect, explainHtml){
   if(explainHtml){
     ex.innerHTML = '<b>'+(wasCorrect?'Yep — ':'Here\'s the read: ')+'</b>' + explainHtml;
     ex.classList.add('show');
+    revealIn(ex);
   } else {
     ex.classList.remove('show');
     ex.innerHTML = '';
@@ -934,6 +1051,7 @@ function finishQuestion(wasCorrect, explainHtml){
   if(nextInline){
     nextInline.textContent = current >= Q.length - 1 ? 'See results' : 'Next';
     nextInline.classList.add('show');
+    revealIn(nextInline);
   }
 }
 
@@ -967,7 +1085,7 @@ function showResults(){
   var html = '<div class="card results">';
   html += '<h2>'+msg+'</h2>';
   html += '<div class="big-score">'+scoreCount+'<span style="font-size:28px;color:var(--ink-soft);">/'+Q.length+'</span></div>';
-  html += '<p>'+pct+'% — Slow 2026 Field IQ</p>';
+  html += '<p>'+pct+'% — Slow Playbook Quiz</p>';
   html += '<div class="review-list">';
   picks.forEach(function(p){
     var q = Q[p.q];
