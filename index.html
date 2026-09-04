@@ -654,6 +654,165 @@ var idealHints = {
 // play needs tightening.)
 var tightPlays = {};
 
+var DEFENSE_MC_DATA = [
+  {
+    section: 'Defense · Pull Calls',
+    prompt: "What's the difference between calling \"Boston\" and calling \"Seattle\" on the pull?",
+    options: [
+      {t:'Boston forces into the called stack for just the pull play, then reverts to the force called on the line; Seattle forces into the stack AND flips as the play begins.', c:true},
+      {t:'Seattle forces into the called stack for just the pull play, then reverts to the force called on the line; Boston forces into the stack AND flips as the play begins.', c:false},
+      {t:'Boston is a zone look; Seattle is straight person defense.', c:false},
+      {t:'Boston traps the near sideline; Seattle traps the far sideline.', c:false}
+    ],
+    explain: 'Boston forces into the specified stack just for the pull play, then we revert to the force called on the line. Seattle does the same setup, but then flips the force as the play begins — good against teams we know will flood or run to a specific side.'
+  },
+  {
+    section: 'Defense · Sideline Traps',
+    prompt: 'The team we\'re playing struggles to get the disc off the trap sideline and loves hitting the inside-break space in flow. Which call fits best?',
+    options: [
+      {t:'Clam', c:true},
+      {t:'FSU', c:false},
+      {t:'Seattle', c:false},
+      {t:'5', c:false}
+    ],
+    explain: 'Clam traps to the nearest sideline. Downfield defenders react and orbit as the disc moves toward that sideline — it\'s good against teams that struggle to break the trap or are adept at hitting inside-break space.'
+  },
+  {
+    section: 'Defense · Disruption Calls',
+    prompt: 'A dominator is breaking the mark and eating up huge yards downfield. What call sends a downfield defender in to disrupt them?',
+    options: [
+      {t:'FSU', c:true},
+      {t:'Lock', c:false},
+      {t:'Clam', c:false},
+      {t:'Void', c:false}
+    ],
+    explain: 'FSU ("fuck shit up") sends a downfield defender — typically DOW — into a dominator set to disrupt flow, mostly providing help on the downfield break space or long upline space. The remaining defenders react by setting up a bracket with deep/under help.'
+  },
+  {
+    section: 'Defense · Reset Positioning',
+    prompt: "What's the difference between the reset-defense calls \"Hike\" and \"Camp\"?",
+    options: [
+      {t:'Hike positions to force resets to leave the handler space; Camp positions to push reset cuts backward. (These replaced last year\'s "squeeze" and "push.")', c:true},
+      {t:'Camp positions to force resets to leave the handler space; Hike positions to push reset cuts backward.', c:false},
+      {t:'Hike is only used in zone defense; Camp is only used in person defense.', c:false},
+      {t:'Hike is for the mark; Camp is for downfield defenders.', c:false},
+      {t:'They mean the same thing — different sideline members just use different words.', c:false}
+    ],
+    explain: '"Hike" and "Camp" are reset-defense positioning words: Hike means we\'re positioning to force resets to hike out of the handler space; Camp means positioning to push reset cuts backward. They replace last year\'s "squeeze" and "push."'
+  },
+  {
+    section: 'Defense · Deep Help',
+    prompt: 'You\'ve been sagging in as the deepest defender, providing help to the underneath defenders. You\'re about to leave that space. What should you call?',
+    options: [
+      {t:'Void', c:true},
+      {t:'Full', c:false},
+      {t:'Lock', c:false},
+      {t:'FSU', c:false}
+    ],
+    explain: 'Full is what you call while you\'re providing deep help (under defenders can hedge on unders, forcing cutters into your help). Void is what you call right before you actually leave that space, so the underneath defender has time to orbit and play more honest.'
+  },
+  {
+    section: 'Defense · Beating a Poach',
+    prompt: "You're a reset being poached. What's the difference between a \"Chisel\" cut and a \"Charlie/Dolphin\" cut?",
+    options: [
+      {t:'Chisel cuts forward toward your own defender to gain yards and change the attack angle; Charlie/Dolphin cuts across to clear the lane the poaching defender is sitting in.', c:true},
+      {t:'Charlie/Dolphin cuts forward toward your own defender to gain yards and change the attack angle; Chisel cuts across to clear the lane the poaching defender is sitting in.', c:false},
+      {t:'Chisel is only for the front of the stack; Charlie/Dolphin is only for handlers.', c:false},
+      {t:'They\'re the same cut — different name depending on which sideline you\'re on.', c:false},
+      {t:'Chisel is a defensive call, not something the reset does.', c:false}
+    ],
+    explain: 'Chisel: when being poached, cut forward toward your defender — gains yards and changes the angle of attack to clear the poach. Charlie/Dolphin: cut across to clear the lane the poaching defender is sitting in. Both are viable poach-clearing options.'
+  },
+  {
+    section: 'Defense · Force Numbers',
+    prompt: "What does calling \"0\" mean, as opposed to calling \"1\" or \"2\"?",
+    options: [
+      {t:'"0" calls force middle / force back, usually paired with a resolving force like "01" or "02"; "1" and "2" call a straight backhand or forehand force.', c:true},
+      {t:'"0" means no mark at all.', c:false},
+      {t:'"0" is the same thing as calling "Lock."', c:false},
+      {t:'"0" only applies during the pull play.', c:false}
+    ],
+    explain: '"1" forces backhand, "2" forces forehand (each including a handler sag on the pull unless stated otherwise). "0" is force middle/force back, and we resolve it to a specific force (e.g. "01" or "02") once the offense gets into the attacking end of the field, or by calling "Lock" + "Home"/"Away."'
+  },
+  {
+    section: 'Defense · Lane Sags',
+    prompt: 'The other team is running a spread offense that loves to flood, and we want our lane defenders to keep sagging even after the disc crosses half field. What number gets layered onto our base force to call this?',
+    options: [
+      {t:'5', c:true},
+      {t:'3', c:false},
+      {t:'0', c:false},
+      {t:'Boston', c:false}
+    ],
+    explain: '"5" means continue lane sags until after the offense passes half field (unlike our base 1/2 calls), and it\'s always paired with a force number. Goal is to take away lanes and disrupt — but stop sagging once the disc nears the sideline, and snap into hard reset coverage late in the stall.'
+  },
+  {
+    section: 'Defense · Brackets',
+    prompt: 'What does calling "3" set up, and how do we get out of it?',
+    options: [
+      {t:'A defensive 3-person bracket, called with the gender-match of the bracket plus a force (e.g. "DOW 32"); we exit it by calling "Lock."', c:true},
+      {t:'A 3-person zone cup that stays on for the whole point.', c:false},
+      {t:'A call that only applies to the pull play, like Boston or Seattle.', c:false},
+      {t:'A rotation where three defenders switch matchups every stall count.', c:false}
+    ],
+    explain: '"3" is a defensive 3-person bracket, always called with the gender-match of the bracket and a force (e.g. "DOW 32" or "DOM 31"), sometimes with a number of passes attached. We exit 3 by calling "Lock."'
+  },
+  {
+    section: 'Defense · Trap Marks',
+    prompt: 'When we trap the sideline, what changes about the mark compared to our default mark?',
+    options: [
+      {t:'The mark comes in at least 90 degrees, then progresses further around on "Around" to stop dumps — while the front of the stack has to play the inside lane.', c:true},
+      {t:'The mark backs off further to bait a huck.', c:false},
+      {t:'Nothing changes — trap only affects downfield defenders, not the mark.', c:false},
+      {t:'The mark switches to a flat mark at 0-15 degrees.', c:false}
+    ],
+    explain: 'On a trap, the mark has to come in at least 90 degrees, then on "Around" progresses further back to stop dumps. The front of the stack must play the inside lane to complete the trap.'
+  },
+  {
+    section: 'Defense · Marking Angles',
+    prompt: "What's the difference between a \"Default\" mark and a \"Flat\" mark?",
+    options: [
+      {t:'Default is sternum-to-shoulder, angled 30-45 degrees; Flat is sternum-to-shoulder but angled 0-15 degrees to pressure hucks and inside breaks while still pushing arounds wide.', c:true},
+      {t:'Flat is sternum-to-shoulder, angled 30-45 degrees; Default is sternum-to-shoulder but angled 0-15 degrees.', c:false},
+      {t:'Default is used only on the sideline; Flat is used only in the middle of the field.', c:false},
+      {t:'Default and Flat are two names for the same mark angle.', c:false}
+    ],
+    explain: 'Default is our base mark: sternum-to-shoulder, angled 30-45 degrees. Flat is set up the same but angled 0-15 degrees, applying more pressure to hucks and inside-break throws while still shuffling to force arounds wide.'
+  },
+  {
+    section: 'Defense · Marking Words',
+    prompt: "What's the difference between a \"No Around\" mark and a \"No Inside\" mark?",
+    options: [
+      {t:'No Around shades further around to deny downfield/across passes (and progresses horizontally on the sideline to deny dump/arounds); No Inside shades to protect the inside lane without going all the way to sternum-to-sternum.', c:true},
+      {t:'No Inside shades further around to deny downfield/across passes; No Around shades to protect the inside lane instead.', c:false},
+      {t:'No Around is a sideline-only call; No Inside is a middle-of-field-only call with no other difference.', c:false},
+      {t:'No Inside means the mark stops covering the inside lane entirely.', c:false}
+    ],
+    explain: 'No Around: in the middle of the field, shade around to deny downfield/across passes; on the sideline, progress further horizontally along your angle to deny dump/around passes. No Inside: shade to protect the inside lane — not the same as "strike," since you won\'t go all the way to sternum-to-sternum and risk downfield breaks.'
+  },
+  {
+    section: 'Defense · Cutter Coverage',
+    prompt: 'The cutter you\'re guarding is no longer a viable target for the thrower right now. What\'s the "Lock & Release" technique?',
+    options: [
+      {t:'Orbit to get in the way of them reaching the next dangerous space.', c:true},
+      {t:'Stay glued to them in tight person defense regardless of the disc.', c:false},
+      {t:'Call "Void" and hand them off to the deep help.', c:false},
+      {t:'Call "FSU" and crash the throwing lane.', c:false}
+    ],
+    explain: 'Lock & Release: when a cutter is no longer viable, orbit to get in the way of them getting to the next dangerous space, rather than sticking tight to a cutter who currently can\'t get the disc.'
+  },
+  {
+    section: 'Defense · Automatics',
+    prompt: 'On a pull play, unless otherwise stated, what should our lane defenders automatically do?',
+    options: [
+      {t:'Auto lane sag', c:true},
+      {t:'Auto Lock', c:false},
+      {t:'Auto FSU', c:false},
+      {t:'Auto Full', c:false}
+    ],
+    explain: 'Auto lane sags on the pull play is one of our automatic behaviors, alongside things like auto Boston side stacks, auto bracketing same-gender players, and lane flashing from the 2nd/3rd player in the stack when defending vert.'
+  }
+];
+
 var Q = [];
 PLAY_DATA.forEach(function(play){
   var override = tightPlays[play.name];
@@ -674,6 +833,29 @@ PLAY_DATA.forEach(function(play){
     explain: explains[play.name] || ''
   });
 });
+
+function shuffled(arr){
+  var a = arr.slice();
+  for(var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+DEFENSE_MC_DATA.forEach(function(dq){
+  Q.push({
+    type: 'mc',
+    section: dq.section,
+    prompt: dq.prompt,
+    options: shuffled(dq.options),
+    explain: dq.explain
+  });
+});
+
+Q = shuffled(Q);
+
+// ---------- defensive scenario/comparison questions (from the team glossary) ----------
 
 var disclaimerCloseBtn = document.getElementById('disclaimer-close');
 if(disclaimerCloseBtn){
@@ -710,6 +892,7 @@ function animateCardIn(cardEl){
 
 // ---------- quiz engine ----------
 var current = 0;
+var hasShownDrawHint = false;
 var scoreCount = 0;
 var picks = []; // {qIndex, correct}
 
@@ -780,7 +963,7 @@ function chooseMc(i){
     else setTimeout(apply, idx * 40);
   });
 
-  finishQuestion(wasCorrect, null);
+  finishQuestion(wasCorrect, q.explain || null);
 }
 
 // ---------- draw-the-cut question ----------
@@ -806,11 +989,12 @@ function renderDrawQuestion(q){
   var drawing = false;
   var locked = false;
 
-  // First question only: a marching-dots preview of the actual cut shape, so it's
+  // First draw-question only: a marching-dots preview of the actual cut shape, so it's
   // obvious both that the field is drawable and roughly what a cut looks like.
   // Removed on the first touch/click.
   var startHintEls = [];
-  if(current === 0){
+  if(!hasShownDrawHint){
+    hasShownDrawHint = true;
     var hintFrom = q.startPoint;
     var hintSegs = q.legs
       ? q.legs.map(function(leg){ return {angle: leg.angle, dist: Math.max(leg.minDist, leg.minDist + 4)}; })
@@ -1135,6 +1319,8 @@ function restart(){
   current = 0;
   scoreCount = 0;
   picks = [];
+  hasShownDrawHint = false;
+  Q = shuffled(Q);
   quizArea.style.display = 'block';
   resultsArea.style.display = 'none';
   renderQuestion();
