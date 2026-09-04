@@ -209,7 +209,13 @@ body{
   display:block;
   border-radius:10px;
   background:var(--field);
-  touch-action:none;
+  /* Only block native touch gestures (scroll/zoom) once a real draw actually
+     starts — that's handled in JS via preventDefault() on pointerdown/move.
+     touch-action:none here would block ALL touch scrolling anywhere on this
+     large diagram, even where the user isn't drawing, trapping them. pan-y
+     lets a vertical scroll swipe pass through natively everywhere except
+     where a draw gesture explicitly cancels it. */
+  touch-action:pan-y;
   -webkit-user-select:none;
   user-select:none;
 }
