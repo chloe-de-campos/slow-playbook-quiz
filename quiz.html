@@ -209,13 +209,14 @@ body{
   display:block;
   border-radius:10px;
   background:var(--field);
-  /* Only block native touch gestures (scroll/zoom) once a real draw actually
-     starts — that's handled in JS via preventDefault() on pointerdown/move.
-     touch-action:none here would block ALL touch scrolling anywhere on this
-     large diagram, even where the user isn't drawing, trapping them. pan-y
-     lets a vertical scroll swipe pass through natively everywhere except
-     where a draw gesture explicitly cancels it. */
-  touch-action:pan-y;
+  /* A touch that starts on the diagram is for drawing, not scrolling — so
+     block native touch gestures (scroll/zoom) here entirely. Scrolling still
+     works normally everywhere else on the page (prompt text, buttons, etc).
+     pan-y was tried here to let scroll swipes pass through the diagram too,
+     but touch-action is decided once at the start of a touch, so any stroke
+     with real vertical motion (most cuts) got reclaimed by native scroll
+     mid-drag and cut short. */
+  touch-action:none;
   -webkit-user-select:none;
   user-select:none;
 }
@@ -989,21 +990,9 @@ function renderDrawQuestion(q){
   var drawing = false;
   var locked = false;
 
-  // The rest of the field is touch-action:pan-y so a scroll swipe passes through
-  // (see .field-svg comment), but touch-action is decided once, from whatever
-  // element a touch actually starts on — so a stroke that begins here can't be
-  // reclaimed by native scrolling mid-drag even once it moves off this small
-  // circle. Sized to match the pointerDown start-radius check below (14 units)
-  // so "where you're allowed to start a cut" and "where scroll is locked out"
-  // stay the same zone.
+  // How close to the play's marked start point a touch/click has to land to
+  // begin a cut (see pointerDown below).
   var START_HIT_RADIUS = 14;
-  var startHitZone = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  startHitZone.setAttribute('cx', q.startPoint.x);
-  startHitZone.setAttribute('cy', q.startPoint.y);
-  startHitZone.setAttribute('r', START_HIT_RADIUS);
-  startHitZone.setAttribute('fill', 'rgba(0,0,0,0.001)');
-  startHitZone.style.touchAction = 'none';
-  svg.appendChild(startHitZone);
 
   // First draw-question only: a marching-dots preview of the actual cut shape, so it's
   // obvious both that the field is drawable and roughly what a cut looks like.
