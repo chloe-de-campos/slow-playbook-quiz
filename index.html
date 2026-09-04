@@ -1,4 +1,6 @@
 <title>Slow Playbook Quiz</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Karla:wght@400;500;700&display=swap');
 
@@ -210,16 +212,19 @@ body{
 }
 .field-svg.drawable{cursor:crosshair;}
 
-.start-hint-ring{
+.start-hint-path{
   pointer-events:none;
-  transform-box:fill-box;
-  transform-origin:center;
-  animation:startHintPulse 1.6s ease-in-out infinite;
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:1.4;
+  stroke-linecap:round;
+  stroke-dasharray:2.2,2.6;
+  opacity:0.6;
+  animation:startHintMarch 0.9s linear infinite;
 }
-@keyframes startHintPulse{
-  0%{transform:scale(0.85);opacity:0.85;}
-  70%{transform:scale(1.7);opacity:0;}
-  100%{transform:scale(1.7);opacity:0;}
+@keyframes startHintMarch{
+  from{stroke-dashoffset:0;}
+  to{stroke-dashoffset:-4.8;}
 }
 
 .draw-actions{
@@ -789,23 +794,31 @@ function renderDrawQuestion(q){
   var drawing = false;
   var locked = false;
 
-  // First question only: a pulsing ring at the start point so it's obvious the field
-  // is drawable before anyone has to guess. Removed on the first touch/click.
-  var startHintEl = null;
+  // First question only: a marching-dots preview of the actual cut shape, so it's
+  // obvious both that the field is drawable and roughly what a cut looks like.
+  // Removed on the first touch/click.
+  var startHintEls = [];
   if(current === 0){
-    startHintEl = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    startHintEl.setAttribute('class', 'start-hint-ring');
-    startHintEl.setAttribute('cx', q.startPoint.x);
-    startHintEl.setAttribute('cy', q.startPoint.y);
-    startHintEl.setAttribute('r', 6.5);
-    startHintEl.setAttribute('fill', 'none');
-    startHintEl.setAttribute('stroke', 'var(--accent)');
-    startHintEl.setAttribute('stroke-width', 1.2);
-    if(reduceMotion) startHintEl.style.animation = 'none';
-    svg.appendChild(startHintEl);
+    var hintFrom = q.startPoint;
+    var hintSegs = q.legs
+      ? q.legs.map(function(leg){ return {angle: leg.angle, dist: Math.max(leg.minDist, leg.minDist + 4)}; })
+      : [{angle: q.idealAngle, dist: q.idealDist}];
+    hintSegs.forEach(function(seg){
+      var rad = seg.angle * Math.PI/180;
+      var ux = Math.cos(rad), uy = -Math.sin(rad);
+      var to = {x: hintFrom.x + ux*seg.dist, y: hintFrom.y + uy*seg.dist};
+      var hintPath = document.createElementNS('http://www.w3.org/2000/svg','path');
+      hintPath.setAttribute('class', 'start-hint-path');
+      hintPath.setAttribute('d', 'M '+hintFrom.x.toFixed(2)+' '+hintFrom.y.toFixed(2)+' L '+to.x.toFixed(2)+' '+to.y.toFixed(2));
+      if(reduceMotion) hintPath.style.animation = 'none';
+      svg.appendChild(hintPath);
+      startHintEls.push(hintPath);
+      hintFrom = to;
+    });
   }
   function clearStartHint(){
-    if(startHintEl){ startHintEl.remove(); startHintEl = null; }
+    startHintEls.forEach(function(el){ el.remove(); });
+    startHintEls = [];
   }
 
   var checkBtn = document.getElementById('check-btn');
