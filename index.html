@@ -82,6 +82,22 @@ body{
   color:var(--ink-soft);
   font-weight:500;
 }
+.disclaimer{
+  background:color-mix(in srgb, var(--defender) 14%, var(--bg-raise));
+  border:1px solid color-mix(in srgb, var(--defender) 35%, var(--card-border));
+  border-radius:12px;
+  padding:10px 14px;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink-soft);
+  margin-bottom:14px;
+}
+.disclaimer a{
+  color:var(--ink);
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
 .progress-row{
   display:flex;
   align-items:center;
@@ -358,6 +374,8 @@ svg.disc-key{
     <h1>Slow Field IQ</h1>
     <span class="tag">2026 playbook check</span>
   </div>
+
+  <div class="disclaimer">I might not have these plays exactly right, and AI definitely doesn't know them well either — this is just a rep for your brain, not the source of truth. Always check the <a href="https://docs.google.com/document/d/1QVX6V7oWnvC7ggyPPxLOK0p9LkegMoG9TFCqXO3vhdA/edit?tab=t.0#heading=h.gzzrcsdbgvb2" target="_blank" rel="noopener">actual playbook</a> for anything that matters.</div>
 
   <div id="quiz-area">
     <div class="progress-row">
