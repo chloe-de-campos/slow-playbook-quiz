@@ -209,7 +209,13 @@ body{
   display:block;
   border-radius:10px;
   background:var(--field);
-  touch-action:none;
+  /* Only block native touch gestures (scroll/zoom) once a real draw actually
+     starts — that's handled in JS via preventDefault() on pointerdown/move.
+     touch-action:none here would block ALL touch scrolling anywhere on this
+     large diagram, even where the user isn't drawing, trapping them. pan-y
+     lets a vertical scroll swipe pass through natively everywhere except
+     where a draw gesture explicitly cancels it. */
+  touch-action:pan-y;
   -webkit-user-select:none;
   user-select:none;
 }
@@ -783,7 +789,7 @@ function renderDrawQuestion(q){
   html += '<div class="card-head"><p class="section-label">'+q.section+'</p>';
   html += '<p class="prompt">'+q.prompt+'</p></div>';
   html += '<div class="field-frame"><div id="draw-host">'+q.setup+'</div></div>';
-  html += '<div class="field-key"><span><i class="you-key"></i>Y, for you</span><span><i style="background:var(--field-line)"></i>teammates</span><span class="mark-key">X&nbsp;Mark</span><span><svg class="disc-key" viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="3.6" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="5" cy="5" r="1.4" fill="var(--ink)"/></svg>disc</span></div>';
+  html += '<div class="field-key"><span><i class="you-key"></i>You</span><span><i style="background:var(--field-line)"></i>Teammate</span><span class="mark-key">X&nbsp;Mark</span><span><svg class="disc-key" viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="3.6" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="5" cy="5" r="1.4" fill="var(--ink)"/></svg>Disc</span></div>';
   html += '<div class="draw-actions"><button class="clear-btn" id="clear-btn" disabled>Clear</button><button class="check-btn" id="check-btn" disabled>Check cut</button></div>';
   html += '<div class="result-banner" id="result-banner"></div>';
   html += '<div class="explain" id="explain"></div>';
